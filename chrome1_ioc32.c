@@ -26,7 +26,7 @@
  */
 
 #include "drmP.h"
-#include "via_drv.h"
+#include "chrome_drv.h"
 
 static int via_agp_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {

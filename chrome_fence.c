@@ -32,8 +32,8 @@
 #include "drm.h"
 #include "chrome_fence.h"
 #include "chrome_object.h"
-#include "chrome_3d_reg.h"
-#include "chrome_dma.h"
+#include "chrome9_3d_reg.h"
+#include "chrome9_dma.h"
 #include "chrome_ttm.h"
 static void chrome_fence_object_destroy(struct kref *kref)
 {

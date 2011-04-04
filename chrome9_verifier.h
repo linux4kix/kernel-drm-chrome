@@ -23,13 +23,13 @@
 * Author: Scott Fang 2008.
 */
 
-#ifndef _via_chrome9_VERIFIER_H_
-#define _via_chrome9_VERIFIER_H_
+#ifndef _chrome_VERIFIER_H_
+#define _chrome_VERIFIER_H_
 
-#define VIA_CHROME9_VERIFY_ENABLE 0
+#define CHROME_VERIFY_ENABLE 0
 #define VIA_VERIFY_BUFFER_SIZE  1024*1024
 
-enum  drm_via_chrome9_sequence {
+enum  drm_chrome_sequence {
 	no_sequence = 0,
 	z_address,
 	dest_address,
@@ -40,14 +40,14 @@ enum  drm_via_chrome9_sequence {
 	fence_cmd_address
 };
 
-struct drm_via_chrome9_state {
+struct drm_chrome_state {
 	uint32_t texture_index;
 	uint32_t render_target_addr[4];
 	uint32_t render_target_pitch[4];
 	uint32_t vb_addr;
 	uint32_t fence_cmd_addr;
 	uint32_t fence_need_check;
-	enum drm_via_chrome9_sequence unfinished;
+	enum drm_chrome_sequence unfinished;
 	int agp_texture;
 	int multitex;
 	struct drm_device *dev;
@@ -55,12 +55,12 @@ struct drm_via_chrome9_state {
 	const uint32_t *buf_start;
 };
 
-int via_chrome9_command_verifier_init(struct drm_device *dev);
-void via_chrome9_command_verifier_fini(struct drm_device *dev);
-int via_chrome9_verify_user_command(uint32_t *dma_buf,
+int chrome_command_verifier_init(struct drm_device *dev);
+void chrome_command_verifier_fini(struct drm_device *dev);
+int chrome_verify_user_command(uint32_t *dma_buf,
 	unsigned int command_size, struct drm_device *dev, int agp);
-int via_chrome9_verify_user_command_done(struct drm_device *dev);
-int via_chrome9_verify_command_stream(const uint32_t *buf,
+int chrome_verify_user_command_done(struct drm_device *dev);
+int chrome_verify_command_stream(const uint32_t *buf,
 	unsigned int size, struct drm_device *dev, int agp);
 
 #endif

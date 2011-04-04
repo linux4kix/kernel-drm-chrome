@@ -24,18 +24,18 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
  * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _VIA_CHROME9_DMA_H_
-#define _VIA_CHROME9_DMA_H_
+#ifndef _CHROME_DMA_H_
+#define _CHROME_DMA_H_
 
 /*via command type*/
-#define VIA_CHROME9_CMD_2D 0x10
-#define VIA_CHROME9_CMD_3D 0x20
-#define VIA_CHROME9_CMD_VIDEO 0x40
-#define VIA_CHROME9_CMD_HQV0 0x80
-#define VIA_CHROME9_CMD_HQV1 0x100
+#define CHROME_CMD_2D 0x10
+#define CHROME_CMD_3D 0x20
+#define CHROME_CMD_VIDEO 0x40
+#define CHROME_CMD_HQV0 0x80
+#define CHROME_CMD_HQV1 0x100
 
 
-struct drm_via_chrome9_dma_manager {
+struct drm_chrome_dma_manager {
 	unsigned int *addr_linear; /* the ring buffer virtual address that we can visit */
 	unsigned int dmasize; /* he ring buffer size */
 	unsigned int *pstart; /* the ring buffer start virtual address */
@@ -66,22 +66,22 @@ struct cmd_release_space {
 	unsigned int  dwreleasesize;
 };
 
-struct drm_via_chrome9_flush {
+struct drm_chrome_flush {
 	int    cmd_size; /* command dword size */
 	unsigned int *dma_buf; /* command buffer pointer */
 };
-extern void via_chrome9_init_dma(struct drm_device *dev);
-extern void via_chrome9_dma_fini(struct drm_device *dev);
-extern void via_chrome9_init_gart_table(struct drm_device *dev);
-extern void via_chrome9_gart_table_fini(struct drm_device *dev);
-extern int via_chrome9_ringbuffer_flush(struct drm_device *dev,
+extern void chrome_init_dma(struct drm_device *dev);
+extern void chrome_dma_fini(struct drm_device *dev);
+extern void chrome_init_gart_table(struct drm_device *dev);
+extern void chrome_gart_table_fini(struct drm_device *dev);
+extern int chrome_ringbuffer_flush(struct drm_device *dev,
 			unsigned int *dma_buf, int command_size, bool from_user,
 			void *parse_ptr);
-extern int via_chrome9_branchbuffer_flush(struct drm_device *dev,
-	struct via_chrome9_object *cmd_obj, int command_size, void *parse_ptr);
-extern void via_chrome9_kickoff_dma_ring(struct drm_device *dev);
+extern int chrome_branchbuffer_flush(struct drm_device *dev,
+	struct chrome_object *cmd_obj, int command_size, void *parse_ptr);
+extern void chrome_kickoff_dma_ring(struct drm_device *dev);
 extern int execute_branch_buffer_h6(struct drm_device *dev,
-	struct via_chrome9_object *vbo, uint32_t cmd_size);
+	struct chrome_object *vbo, uint32_t cmd_size);
 extern int execute_branch_buffer_h5s2vp1(struct drm_device *dev,
-	struct via_chrome9_object *vbo, uint32_t cmd_size);
+	struct chrome_object *vbo, uint32_t cmd_size);
 #endif

@@ -27,14 +27,14 @@
 * be very slow.
 */
 
-#include "via_chrome9_3d_reg.h"
+#include "chrome9_3d_reg.h"
 #include "drmP.h"
 #include "drm.h"
-#include "via_chrome9_drm.h"
-#include "via_chrome9_verifier.h"
-#include "via_chrome9_drv.h"
+#include "chrome_drm.h"
+#include "chrome9_verifier.h"
+#include "chrome_drv.h"
 
-#if VIA_CHROME9_VERIFY_ENABLE
+#if CHROME_VERIFY_ENABLE
 static void *back_verify_buffer = NULL;
 
 enum verifier_state {
@@ -79,7 +79,7 @@ enum hazard {
  * that does not include any part of the address.
  */
 
-static enum drm_via_chrome9_sequence seqs[] = {
+static enum drm_chrome_sequence seqs[] = {
 	no_sequence,
 	dest_address,
 	dest_address,
@@ -381,11 +381,11 @@ static enum hazard init_table_11_353[256];
 
 /*Require fence command id location reside in the shadow system memory */
 static inline int
-check_fence_cmd_addr_range(struct drm_via_chrome9_state *seq,
+check_fence_cmd_addr_range(struct drm_chrome_state *seq,
 	unsigned long fence_cmd_add, unsigned long size, struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *)dev->dev_private;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *)dev->dev_private;
 	if (!dev_priv->shadow_map.shadow)
 		return -1;
 	if ((fence_cmd_add < dev_priv->shadow_map.shadow->offset) ||
@@ -402,7 +402,7 @@ check_fence_cmd_addr_range(struct drm_via_chrome9_state *seq,
  * NOTE:No care about AGP address.(we just think all AGP access are safe now).
  */
 
-static inline int finish_current_sequence(struct drm_via_chrome9_state *cur_seq)
+static inline int finish_current_sequence(struct drm_chrome_state *cur_seq)
 {
 	switch (cur_seq->unfinished) {
 	case fence_cmd_address:
@@ -422,7 +422,7 @@ static inline int finish_current_sequence(struct drm_via_chrome9_state *cur_seq)
  */
 static inline int
 investigate_hazard(uint32_t cmd, enum hazard hz,
-	struct drm_via_chrome9_state *cur_seq)
+	struct drm_chrome_state *cur_seq)
 {
 	register uint32_t tmp;
 
@@ -632,7 +632,7 @@ verify_video_tail(uint32_t const **buffer, const uint32_t *buf_end,
 }
 
 static inline enum verifier_state
-via_chrome9_check_header0(uint32_t const **buffer, const uint32_t *buf_end)
+chrome_check_header0(uint32_t const **buffer, const uint32_t *buf_end)
 {
 	const uint32_t *buf = *buffer;
 	uint32_t cmd, qword, dword;
@@ -663,7 +663,7 @@ via_chrome9_check_header0(uint32_t const **buffer, const uint32_t *buf_end)
 }
 
 static inline enum verifier_state
-via_chrome9_check_header1(uint32_t const **buffer, const uint32_t *buf_end)
+chrome_check_header1(uint32_t const **buffer, const uint32_t *buf_end)
 {
 	uint32_t dword;
 	const uint32_t *buf = *buffer;
@@ -684,8 +684,8 @@ via_chrome9_check_header1(uint32_t const **buffer, const uint32_t *buf_end)
 }
 
 static inline enum verifier_state
-via_chrome9_check_header2(uint32_t const **buffer,
-	const uint32_t *buf_end, struct drm_via_chrome9_state *hc_state)
+chrome_check_header2(uint32_t const **buffer,
+	const uint32_t *buf_end, struct drm_chrome_state *hc_state)
 {
 	uint32_t cmd1, cmd2;
 	enum hazard hz;
@@ -799,7 +799,7 @@ via_chrome9_check_header2(uint32_t const **buffer,
 }
 
 static inline enum verifier_state
-via_chrome9_check_header3(uint32_t const **buffer,
+chrome_check_header3(uint32_t const **buffer,
 	const uint32_t *buf_end)
 {
 	const uint32_t *buf = *buffer;
@@ -814,7 +814,7 @@ via_chrome9_check_header3(uint32_t const **buffer,
 
 
 static inline enum verifier_state
-via_chrome9_check_vheader4(uint32_t const **buffer,
+chrome_check_vheader4(uint32_t const **buffer,
 	const uint32_t *buf_end)
 {
 	uint32_t data;
@@ -849,7 +849,7 @@ via_chrome9_check_vheader4(uint32_t const **buffer,
 }
 
 static inline enum verifier_state
-via_chrome9_check_vheader5(uint32_t const **buffer, const uint32_t *buf_end)
+chrome_check_vheader5(uint32_t const **buffer, const uint32_t *buf_end)
 {
 	uint32_t data;
 	const uint32_t *buf = *buffer;
@@ -884,14 +884,14 @@ via_chrome9_check_vheader5(uint32_t const **buffer, const uint32_t *buf_end)
 }
 
 int
-via_chrome9_verify_command_stream(const uint32_t *buf,
+chrome_verify_command_stream(const uint32_t *buf,
 	unsigned int size, struct drm_device *dev, int agp)
 {
 
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
-	struct drm_via_chrome9_state *hc_state = &dev_priv->hc_state;
-	struct drm_via_chrome9_state saved_state = *hc_state;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
+	struct drm_chrome_state *hc_state = &dev_priv->hc_state;
+	struct drm_chrome_state saved_state = *hc_state;
 	uint32_t cmd;
 	const uint32_t *buf_end = buf + (size >> 2);
 	enum verifier_state state = state_command;
@@ -908,23 +908,23 @@ via_chrome9_verify_command_stream(const uint32_t *buf,
 
 		switch (state) {
 		case state_header0:
-			state = via_chrome9_check_header0(&buf, buf_end);
+			state = chrome_check_header0(&buf, buf_end);
 			break;
 		case state_header1:
-			state = via_chrome9_check_header1(&buf, buf_end);
+			state = chrome_check_header1(&buf, buf_end);
 			break;
 		case state_header2:
-			state = via_chrome9_check_header2(&buf,
+			state = chrome_check_header2(&buf,
 				buf_end, hc_state);
 			break;
 		case state_header3:
-			state = via_chrome9_check_header3(&buf, buf_end);
+			state = chrome_check_header3(&buf, buf_end);
 			break;
 		case state_header4:
-			state = via_chrome9_check_vheader4(&buf, buf_end);
+			state = chrome_check_vheader4(&buf, buf_end);
 			break;
 		case state_header5:
-			state = via_chrome9_check_vheader5(&buf, buf_end);
+			state = chrome_check_vheader5(&buf, buf_end);
 			break;
 		case state_header6:
 		case state_header7:
@@ -979,11 +979,11 @@ via_chrome9_verify_command_stream(const uint32_t *buf,
 }
 
 /*use verify buffer(cached) will be much faster than verify in TT memory */
-int  via_chrome9_verify_user_command(uint32_t *dma_buf,
+int  chrome_verify_user_command(uint32_t *dma_buf,
 	unsigned int command_size, struct drm_device *dev, int agp)
 {	
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
 	void *verify_buff = dev_priv->verify_buff;
 	int ret;
 
@@ -1004,7 +1004,7 @@ int  via_chrome9_verify_user_command(uint32_t *dma_buf,
 		dev_priv->verify_buff = verify_buff;
 	}
 	copy_from_user((int *)verify_buff, dma_buf, command_size);
-	ret = via_chrome9_verify_command_stream(
+	ret = chrome_verify_command_stream(
 			(const uint32_t *)verify_buff, command_size, dev, agp);
 	if (ret) {
 		DRM_ERROR("The user command has security issue.\n");
@@ -1016,10 +1016,10 @@ int  via_chrome9_verify_user_command(uint32_t *dma_buf,
 
 /*free verify temp bufer */
 int
-via_chrome9_verify_user_command_done(struct drm_device *dev)
+chrome_verify_user_command_done(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
 
 	if (unlikely(back_verify_buffer)) {
 		if (dev_priv->verify_buff)
@@ -1048,10 +1048,10 @@ enum hazard table[], int size)
 		table[init_table[i].code] = init_table[i].hz;
 }
 
-int via_chrome9_command_verifier_init(struct drm_device *dev)
+int chrome_command_verifier_init(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *p_priv =
-		(struct drm_via_chrome9_private *)dev->dev_private;
+	struct drm_chrome_private *p_priv =
+		(struct drm_chrome_private *)dev->dev_private;
 
 	if (!(p_priv->verify_buff = vmalloc(VIA_VERIFY_BUFFER_SIZE))) {
 		DRM_ERROR("Via_chrome9 init verfiy error! can't alloc verify buffer");
@@ -1068,15 +1068,15 @@ int via_chrome9_command_verifier_init(struct drm_device *dev)
 			   sizeof(init_table4) / sizeof(struct hz_init));
 	setup_hazard_table(init_table5, init_table_11_353,
 			   sizeof(init_table5) / sizeof(struct hz_init));
-	DRM_INFO("via_chrome9 verify function enabled. \n");
+	DRM_INFO("chrome verify function enabled. \n");
 
 	return 0;
 }
 
-void via_chrome9_command_verifier_fini(struct drm_device *dev)
+void chrome_command_verifier_fini(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *p_priv =
-		(struct drm_via_chrome9_private *)dev->dev_private;
+	struct drm_chrome_private *p_priv =
+		(struct drm_chrome_private *)dev->dev_private;
 
 	if (p_priv->verify_buff)
 		vfree(p_priv->verify_buff);

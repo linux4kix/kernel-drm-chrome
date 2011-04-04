@@ -23,47 +23,47 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
  * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _VIA_CHROME9_RELOC_H_
-#define _VIA_CHROME9_RELOC_H_
+#ifndef _CHROME_RELOC_H_
+#define _CHROME_RELOC_H_
 
-struct via_chrome9_flush_buffer {
+struct chrome_flush_buffer {
 	/* the list for valid */
 	struct list_head list;
 	/* the gem object for this bo */
 	struct drm_gem_object *gobj;
 	/* the via chrome9 object to this bo */
-	struct via_chrome9_object *vobj;
+	struct chrome_object *vobj;
 	/* the bo location count at reloc list */
 	unsigned int reloc_count;
 };
 
-struct drm_via_chrome9_gem_flush_parse {
+struct drm_chrome_gem_flush_parse {
 	/* the list for valid */
 	struct list_head	valid_list;
 	/* the exec object for this emit */
-	struct drm_via_chrome9_gem_exec_object *exec_objects;
+	struct drm_chrome_gem_exec_object *exec_objects;
 	/* the reloc list */
-	struct drm_via_chrome9_gem_relocation_entry *relocs;
+	struct drm_chrome_gem_relocation_entry *relocs;
 	/* the bo at reloc list */
-	struct via_chrome9_flush_buffer *reloc_buffer;
+	struct chrome_flush_buffer *reloc_buffer;
 	/* the fence for flush */
-	struct via_chrome9_fence_object *fence;
+	struct chrome_fence_object *fence;
 	/* the mask for us valid bo */
 	bool need_correct;
 };
 
 extern int
-via_chrome9_parse_init(struct drm_device *dev, struct drm_file *file_priv,
-				struct drm_via_chrome9_gem_flush_parse *parse,
-				struct drm_via_chrome9_gem_flush *data);
+chrome_parse_init(struct drm_device *dev, struct drm_file *file_priv,
+				struct drm_chrome_gem_flush_parse *parse,
+				struct drm_chrome_gem_flush *data);
 extern int
-via_chrome9_parse_reloc(struct drm_device *dev, struct drm_file *file_priv,
-				struct drm_via_chrome9_gem_flush_parse *parse);
+chrome_parse_reloc(struct drm_device *dev, struct drm_file *file_priv,
+				struct drm_chrome_gem_flush_parse *parse);
 extern int
-via_chrome9_reloc_valid(struct drm_via_chrome9_gem_flush_parse *parse,
+chrome_reloc_valid(struct drm_chrome_gem_flush_parse *parse,
 				unsigned long *pcmddata, int i);
 extern void
-via_chrome9_parse_fini(struct drm_device *dev, struct drm_file *file_priv,
-				struct drm_via_chrome9_gem_flush_parse *parse,
+chrome_parse_fini(struct drm_device *dev, struct drm_file *file_priv,
+				struct drm_chrome_gem_flush_parse *parse,
 				int error);
 #endif

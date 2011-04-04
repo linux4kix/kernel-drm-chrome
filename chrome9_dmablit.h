@@ -23,9 +23,9 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
  * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _VIA_CHROME9_DMABLIT_H_
-#define _VIA_CHROME9_DMABLIT_H_
+#ifndef _CHROME_DMABLIT_H_
+#define _CHROME_DMABLIT_H_
 
-extern void via_chrome9_init_dmablit(struct drm_device *dev);
-extern void via_chrome9_dmablit_fini(struct drm_device *dev);
+extern void chrome_init_dmablit(struct drm_device *dev);
+extern void chrome_dmablit_fini(struct drm_device *dev);
 #endif

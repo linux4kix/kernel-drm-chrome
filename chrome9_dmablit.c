@@ -27,16 +27,16 @@
 #include "drmP.h"
 #include "chrome_drm.h"
 #include "chrome_drv.h"
-#include "chrome9_mm.h"
+#include "chrome_mm.h"
 #include "chrome9_dma.h"
 #include "chrome9_3d_reg.h"
 
-void via_chrome9_init_dmablit(struct drm_device *dev)
+void chrome_init_dmablit(struct drm_device *dev)
 {
 
 }
 
-void via_chrome9_dmablit_fini(struct drm_device *dev)
+void chrome_dmablit_fini(struct drm_device *dev)
 {
 
 }

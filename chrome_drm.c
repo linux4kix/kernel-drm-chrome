@@ -28,11 +28,11 @@
 #include "chrome_drm.h"
 #include "chrome_drv.h"
 #include "chrome_mm.h"
-#include "chrome_dma.h"
+#include "chrome9_dma.h"
 #include "chrome_object.h"
-#include "chrome_3d_reg.h"
+#include "chrome9_3d_reg.h"
 #include "chrome_gem.h"
-#include "chrome_reloc.h"
+#include "chrome9_reloc.h"
 
 int chrome_ioctl_gem_create(struct drm_device *dev, void *data,
 	struct drm_file *file_priv)

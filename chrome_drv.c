@@ -28,9 +28,9 @@
 #include "drmP.h"
 #include "chrome_drm.h"
 #include "chrome_drv.h"
-#include "chrome_dma.h"
+#include "chrome9_dma.h"
 #include "chrome_mm.h"
-#include "chrome_3d_reg.h"
+#include "chrome9_3d_reg.h"
 #include "chrome_init.h"
 #include "chrome_object.h"
 

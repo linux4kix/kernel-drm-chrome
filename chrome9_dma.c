@@ -27,11 +27,11 @@
 
 #include "drmP.h"
 #include "drm.h"
-#include "chrome9_drm.h"
+#include "chrome_drm.h"
 #include "chrome_drv.h"
 #include "chrome9_3d_reg.h"
 #include "chrome9_dma.h"
-#include "chrome9_mm.h"
+#include "chrome_mm.h"
 #include "chrome_object.h"
 #include "chrome9_reloc.h"
 #include "chrome_fence.h"
@@ -49,10 +49,10 @@ static unsigned int NULL_COMMAND_INV[4] =
 void
 set_agp_ring_buffer_stop(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
-	struct drm_via_chrome9_dma_manager *lpcmdmamanager =
-		(struct drm_via_chrome9_dma_manager *) dev_priv->dma_manager;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
+	struct drm_chrome_dma_manager *lpcmdmamanager =
+		(struct drm_chrome_dma_manager *) dev_priv->dma_manager;
 	unsigned long agpbuflinearbase, agpbufphysicalbase;
 	unsigned int dwreg64, dwreg65, dwpause;
 	unsigned int *pfree;
@@ -81,10 +81,10 @@ set_agp_ring_buffer_stop(struct drm_device *dev)
 void
 set_agp_ring_cmd_inv(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
-	struct drm_via_chrome9_dma_manager *lpcmdmamanager =
-		(struct drm_via_chrome9_dma_manager *) dev_priv->dma_manager;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
+	struct drm_chrome_dma_manager *lpcmdmamanager =
+		(struct drm_chrome_dma_manager *) dev_priv->dma_manager;
 	unsigned long agpbuflinearbase, agpbufphysicalbase;
 	unsigned int *pfree;
 	unsigned int dwstart, dwjump, dwend, dwpause, agpcurraddr, agpcurstat;
@@ -179,9 +179,9 @@ set_agp_ring_cmd_inv(struct drm_device *dev)
 static void
 rewind_ring_agp_inv(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
-	struct drm_via_chrome9_dma_manager *lpcmdmamanager =
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
+	struct drm_chrome_dma_manager *lpcmdmamanager =
 		dev_priv->dma_manager;
 	unsigned int dwpause, dwjump, dwreg64, dwreg65, dwreg66, dwreg67;
 	unsigned long agpbuflinearbase =
@@ -235,9 +235,9 @@ static void
 get_space_ring_inv(struct drm_device *dev,
 		   struct cmd_get_space *lpcmgetspacedata)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
-	struct drm_via_chrome9_dma_manager *lpcmdmamanager =
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
+	struct drm_chrome_dma_manager *lpcmdmamanager =
 		dev_priv->dma_manager;
 	unsigned int dwunflushed;
 	u32 bufstart, bufend, cursw, curhw, nextsw, boundarycheck;
@@ -373,9 +373,9 @@ release_space_inv(struct drm_device *dev,
 		  struct cmd_release_space *lpcmReleaseSpaceData,
 		  bool dummy_command)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
-	struct drm_via_chrome9_dma_manager *lpcmdmamanager =
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
+	struct drm_chrome_dma_manager *lpcmdmamanager =
 		dev_priv->dma_manager;
 	unsigned int dwreleasesize = lpcmReleaseSpaceData->dwreleasesize;
 	int i = 0;
@@ -399,12 +399,12 @@ release_space_inv(struct drm_device *dev,
 
 /*pad 512 byte command, to avoid command cached in WC buffer*/
 static void
-via_chrome9_pad_command(struct drm_device *dev)
+chrome_pad_command(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
-	struct drm_via_chrome9_dma_manager *lpcmdmamanager =
-		(struct drm_via_chrome9_dma_manager *) dev_priv->dma_manager;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
+	struct drm_chrome_dma_manager *lpcmdmamanager =
+		(struct drm_chrome_dma_manager *) dev_priv->dma_manager;
 	unsigned int i, *pfree;
 	pfree = lpcmdmamanager->pfree;
 	/*Just Pad command, not executed by GPU*/
@@ -416,13 +416,13 @@ via_chrome9_pad_command(struct drm_device *dev)
 
 /* kick of the command */
 void
-via_chrome9_kickoff_dma_ring(struct drm_device *dev)
+chrome_kickoff_dma_ring(struct drm_device *dev)
 {
 	unsigned int dwpause, dwreg64, dwreg65;
 
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
-	struct drm_via_chrome9_dma_manager *lpcmdmamanager =
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
+	struct drm_chrome_dma_manager *lpcmdmamanager =
 		dev_priv->dma_manager;
 
 	unsigned long agpbuflinearbase =
@@ -440,7 +440,7 @@ via_chrome9_kickoff_dma_ring(struct drm_device *dev)
 		} while ((unsigned long)lpcmdmamanager->pfree & 0x7f);
 	}
 
-	via_chrome9_pad_command(dev);
+	chrome_pad_command(dev);
 
 	dwpause = (unsigned int)((unsigned long)lpcmdmamanager->pfree
 		- agpbuflinearbase + agpbufphysicalbase - 16);
@@ -456,65 +456,65 @@ via_chrome9_kickoff_dma_ring(struct drm_device *dev)
 
 }
 
-void via_chrome9_init_gart_table(struct drm_device *dev)
+void chrome_init_gart_table(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *p_priv =
-		(struct drm_via_chrome9_private *)dev->dev_private;
+	struct drm_chrome_private *p_priv =
+		(struct drm_chrome_private *)dev->dev_private;
 	unsigned int gartoffset = p_priv->pcie_gart_start;
 	u8 sr6a, sr6b, sr6c, sr6f;
 
 	/* enable gti write */
-	VIA_CHROME9_WRITE8(0x83c4, 0x6c);
-	sr6c = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6c);
+	sr6c = CHROME_READ8(0x83c5);
 	sr6c &= 0x7F;
-	VIA_CHROME9_WRITE8(0x83c5, sr6c);
+	CHROME_WRITE8(0x83c5, sr6c);
 
 	/* set the base address of gart table */
 	sr6a = (gartoffset & 0xff000) >> 12;
-	VIA_CHROME9_WRITE8(0x83c4, 0x6a);
-	VIA_CHROME9_WRITE8(0x83c5, sr6a);
+	CHROME_WRITE8(0x83c4, 0x6a);
+	CHROME_WRITE8(0x83c5, sr6a);
 
 	sr6b = (gartoffset & 0xff000) >> 20;
-	VIA_CHROME9_WRITE8(0x83c4, 0x6b);
-	VIA_CHROME9_WRITE8(0x83c5, sr6b);
+	CHROME_WRITE8(0x83c4, 0x6b);
+	CHROME_WRITE8(0x83c5, sr6b);
 
-	VIA_CHROME9_WRITE8(0x83c4, 0x6c);
-	sr6c = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6c);
+	sr6c = CHROME_READ8(0x83c5);
 	sr6c |= ((gartoffset >> 28) & 0x01);
-	VIA_CHROME9_WRITE8(0x83c5, sr6c);
+	CHROME_WRITE8(0x83c5, sr6c);
 
 	/* flush the gti cache */
-	VIA_CHROME9_WRITE8(0x83c4, 0x6f);
-	sr6f = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6f);
+	sr6f = CHROME_READ8(0x83c5);
 	sr6f |= 0x80;
-	VIA_CHROME9_WRITE8(0x83c5, sr6f);
+	CHROME_WRITE8(0x83c5, sr6f);
 
 	/* disable the gti write */
-	VIA_CHROME9_WRITE8(0x83c4, 0x6c);
-	sr6c = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6c);
+	sr6c = CHROME_READ8(0x83c5);
 	sr6c |= 0x80;
-	VIA_CHROME9_WRITE8(0x83c5, sr6c);
+	CHROME_WRITE8(0x83c5, sr6c);
 
 }
 
-void via_chrome9_gart_table_fini(struct drm_device *dev)
+void chrome_gart_table_fini(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *p_priv =
-		(struct drm_via_chrome9_private *)dev->dev_private;
+	struct drm_chrome_private *p_priv =
+		(struct drm_chrome_private *)dev->dev_private;
 	u8 sr6c;
 
 	/* enable gti write */
-	VIA_CHROME9_WRITE8(0x83c4, 0x6c);
-	sr6c = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6c);
+	sr6c = CHROME_READ8(0x83c5);
 	sr6c &= 0x7F;
-	VIA_CHROME9_WRITE8(0x83c5, sr6c);
+	CHROME_WRITE8(0x83c5, sr6c);
 
 	/* release the gart table */
-	via_chrome9_buffer_object_kunmap(p_priv->agp_gart);
-	via_chrome9_buffer_object_unref(&p_priv->agp_gart);
+	chrome_buffer_object_kunmap(p_priv->agp_gart);
+	chrome_buffer_object_unref(&p_priv->agp_gart);
 	/*release gart_table shadow*/
-	via_chrome9_buffer_object_kunmap(p_priv->pm_backup.agp_gart_shadow);
-	via_chrome9_buffer_object_unref(&p_priv->pm_backup.agp_gart_shadow);
+	chrome_buffer_object_kunmap(p_priv->pm_backup.agp_gart_shadow);
+	chrome_buffer_object_unref(&p_priv->pm_backup.agp_gart_shadow);
 	p_priv->pcie_gart_map = NULL;
 }
 /**
@@ -525,10 +525,10 @@ void via_chrome9_gart_table_fini(struct drm_device *dev)
 
 int
 execute_branch_buffer_h5s2vp1(struct drm_device *dev,
-	struct via_chrome9_object *vbo, uint32_t cmd_size)
+	struct chrome_object *vbo, uint32_t cmd_size)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *)dev->dev_private;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *)dev->dev_private;
 	struct cmd_get_space getspace;
 	struct cmd_release_space releasespace;
 	uint32_t *pcmddata = NULL, *pcmdbuf = NULL;
@@ -570,10 +570,10 @@ execute_branch_buffer_h5s2vp1(struct drm_device *dev,
 
 int
 execute_branch_buffer_h6(struct drm_device *dev,
-	struct via_chrome9_object *vbo, uint32_t cmd_size)
+	struct chrome_object *vbo, uint32_t cmd_size)
 {	
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *)dev->dev_private;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *)dev->dev_private;
 	struct cmd_get_space getspace;
 	struct cmd_release_space releasespace;
 	uint32_t i, dwReg68, dwReg69, dwReg6A, dwReg6B;
@@ -623,20 +623,20 @@ execute_branch_buffer_h6(struct drm_device *dev,
 	return 0;
 }
 
-void via_chrome9_init_dma(struct drm_device *dev)
+void chrome_init_dma(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *)dev->dev_private;
-	struct drm_via_chrome9_dma_manager *lpcmdmamanager = NULL;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *)dev->dev_private;
+	struct drm_chrome_dma_manager *lpcmdmamanager = NULL;
 
 	dev_priv->dma_manager =
-		kmalloc(sizeof(struct drm_via_chrome9_dma_manager), GFP_KERNEL);
+		kmalloc(sizeof(struct drm_chrome_dma_manager), GFP_KERNEL);
 	if (!dev_priv->dma_manager) {
 		DRM_ERROR("could not allocate system for dma_manager!\n");
 		return;
 	}
 	lpcmdmamanager =
-		(struct drm_via_chrome9_dma_manager *) dev_priv->dma_manager;
+		(struct drm_chrome_dma_manager *) dev_priv->dma_manager;
 	mutex_init(&lpcmdmamanager->command_flush_lock);	
 	lpcmdmamanager->dmasize = dev_priv->ring_buffer_size;
 	lpcmdmamanager->dmasize /= sizeof(unsigned int);
@@ -653,17 +653,17 @@ void via_chrome9_init_dma(struct drm_device *dev)
 	set_agp_ring_cmd_inv(dev);
 }
 
-void via_chrome9_dma_fini(struct drm_device *dev)
+void chrome_dma_fini(struct drm_device *dev)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *)dev->dev_private;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *)dev->dev_private;
 
 	/* stop the cr engine */
 	set_agp_ring_buffer_stop(dev);
 
 	/* release the ring buffer */
-	via_chrome9_buffer_object_kunmap(dev_priv->agp_ringbuffer);
-	via_chrome9_buffer_object_unref(&dev_priv->agp_ringbuffer);
+	chrome_buffer_object_kunmap(dev_priv->agp_ringbuffer);
+	chrome_buffer_object_unref(&dev_priv->agp_ringbuffer);
 	dev_priv->agp_ringbuffer = NULL;
 
 	/* release the dma manager */
@@ -671,17 +671,17 @@ void via_chrome9_dma_fini(struct drm_device *dev)
 	dev_priv->dma_manager = NULL;
 }
 
-int via_chrome9_ringbuffer_flush(struct drm_device *dev, unsigned int *dma_buf,
+int chrome_ringbuffer_flush(struct drm_device *dev, unsigned int *dma_buf,
 					int command_size, bool from_user,
 					void *parse_ptr)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
-	struct drm_via_chrome9_gem_flush_parse *parse =
-		(struct drm_via_chrome9_gem_flush_parse *)parse_ptr;
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
+	struct drm_chrome_gem_flush_parse *parse =
+		(struct drm_chrome_gem_flush_parse *)parse_ptr;
 	struct cmd_get_space getspace;
 	struct cmd_release_space releasespace;
-	struct via_chrome9_flush_buffer *reloc_buffer;
+	struct chrome_flush_buffer *reloc_buffer;
 	struct list_head *p;
 	unsigned long *pcmddata = NULL;
 	int ret = 0;
@@ -698,14 +698,14 @@ int via_chrome9_ringbuffer_flush(struct drm_device *dev, unsigned int *dma_buf,
 	get_space_ring_inv(dev, &getspace);
 	if (pcmddata) {
 		if (from_user) {
-#if VIA_CHROME9_VERIFY_ENABLE
-			if ((ret = via_chrome9_verify_user_command(
+#if CHROME_VERIFY_ENABLE
+			if ((ret = chrome_verify_user_command(
 					(uint32_t *)dma_buf, command_size << 2, dev, 0))) {
 				return -EINVAL;
 			}
 #endif
 
-#if VIA_CHROME9_VERIFY_ENABLE
+#if CHROME_VERIFY_ENABLE
 			memcpy((void *)pcmddata, (void *)dev_priv->verify_buff,
 					command_size << 2);
 #else
@@ -713,7 +713,7 @@ int via_chrome9_ringbuffer_flush(struct drm_device *dev, unsigned int *dma_buf,
 					command_size << 2);
 #endif
 			if (ret) {
-				DRM_ERROR("In function via_chrome9_ringbuffer_flush,"
+				DRM_ERROR("In function chrome_ringbuffer_flush,"
 					"copy_from_user is fault. \n");
 				return -EINVAL;
 			}
@@ -726,16 +726,16 @@ int via_chrome9_ringbuffer_flush(struct drm_device *dev, unsigned int *dma_buf,
 		DRM_INFO("No enough ring buffer space");
 		ret = -ENOMEM;
 	}
-#if VIA_CHROME9_VERIFY_ENABLE
+#if CHROME_VERIFY_ENABLE
 	if (from_user)
-		via_chrome9_verify_user_command_done(dev);
+		chrome_verify_user_command_done(dev);
 #endif
 	if (from_user) {
 		if (parse->need_correct) {
 			list_for_each(p, &parse->valid_list) {
 				reloc_buffer = list_entry(
-					p, struct via_chrome9_flush_buffer, list);
-				via_chrome9_reloc_valid(parse, pcmddata,
+					p, struct chrome_flush_buffer, list);
+				chrome_reloc_valid(parse, pcmddata,
 					reloc_buffer->reloc_count);
 			}
 		}
@@ -751,29 +751,29 @@ int via_chrome9_ringbuffer_flush(struct drm_device *dev, unsigned int *dma_buf,
 	return ret;
 }
 
-int via_chrome9_branchbuffer_flush(struct drm_device *dev,
-	struct via_chrome9_object *cmd_obj, int command_size, void *parse_ptr)
+int chrome_branchbuffer_flush(struct drm_device *dev,
+	struct chrome_object *cmd_obj, int command_size, void *parse_ptr)
 {
-	struct drm_via_chrome9_private *dev_priv =
-		(struct drm_via_chrome9_private *) dev->dev_private;
-	struct drm_via_chrome9_gem_flush_parse *parse =
-		(struct drm_via_chrome9_gem_flush_parse *)parse_ptr;
-	struct via_chrome9_cmdbuffer_ops *cmdbuffer_ops =
+	struct drm_chrome_private *dev_priv =
+		(struct drm_chrome_private *) dev->dev_private;
+	struct drm_chrome_gem_flush_parse *parse =
+		(struct drm_chrome_gem_flush_parse *)parse_ptr;
+	struct chrome_cmdbuffer_ops *cmdbuffer_ops =
 		&dev_priv->engine_ops.cmdbuffer_ops;
-	struct via_chrome9_flush_buffer *reloc_buffer;
+	struct chrome_flush_buffer *reloc_buffer;
 	struct list_head *p;
 	int ret = 0;
 
-	set_bit(VIA_CHROME9_BO_FLAG_CMD_FLUSHING, &cmd_obj->flags);
+	set_bit(CHROME_BO_FLAG_CMD_FLUSHING, &cmd_obj->flags);
 	/*Unmap BO from userspace*/
 	ttm_bo_unmap_virtual(&cmd_obj->bo);
 
 	/*map cmd buffer BO*/
-	via_chrome9_buffer_object_kmap(cmd_obj, NULL);
+	chrome_buffer_object_kmap(cmd_obj, NULL);
 
 	/*verify command*/
-#if VIA_CHROME9_VERIFY_ENABLE
-	ret = via_chrome9_verify_command_stream(cmd_obj->kmap.virtual,
+#if CHROME_VERIFY_ENABLE
+	ret = chrome_verify_command_stream(cmd_obj->kmap.virtual,
 		command_size << 2, dev, 0);
 	if (ret) {
 		DRM_ERROR("The user command has security issue.\n");
@@ -784,29 +784,29 @@ int via_chrome9_branchbuffer_flush(struct drm_device *dev,
 	if (parse->need_correct) {
 		list_for_each(p, &parse->valid_list) {
 			reloc_buffer = list_entry(
-				p, struct via_chrome9_flush_buffer, list);
-			via_chrome9_reloc_valid(parse, cmd_obj->kmap.virtual,
+				p, struct chrome_flush_buffer, list);
+			chrome_reloc_valid(parse, cmd_obj->kmap.virtual,
 				reloc_buffer->reloc_count);
 		}
 	}
 
 	/*Pin branch Buffer to the TT memory(WC)*/
-	ret = via_chrome9_bo_pin(cmd_obj, VIA_CHROME9_GEM_DOMAIN_GTT, NULL);
+	ret = chrome_bo_pin(cmd_obj, CHROME_GEM_DOMAIN_GTT, NULL);
 	if (ret) {
 		DRM_ERROR("Branch buffer Pin failed!\n ");
-		via_chrome9_fence_unref((struct via_chrome9_fence_object **)&cmd_obj->bo.sync_obj);
+		chrome_fence_unref((struct chrome_fence_object **)&cmd_obj->bo.sync_obj);
 		return ret;
 	}
 
 	/*add fence to cmd buffer BO*/
 	if (likely(parse->fence))
-		cmd_obj->bo.sync_obj = via_chrome9_fence_ref(parse->fence);
+		cmd_obj->bo.sync_obj = chrome_fence_ref(parse->fence);
 
 	/*execuate branch buffer command*/
 	cmdbuffer_ops->execute_branch_buffer(dev, cmd_obj, command_size);
 
 	/*unmap BO*/
-	via_chrome9_buffer_object_kunmap(cmd_obj);
+	chrome_buffer_object_kunmap(cmd_obj);
 
 	return ret;
 }

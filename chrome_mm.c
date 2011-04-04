@@ -24,9 +24,12 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
  * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _VIA_CHROME9_MM_H_
-#define _VIA_CHROME9_MM_H_
 
+#include "drmP.h"
+#include "chrome_drm.h"
+#include "chrome_drv.h"
+#include "drm_sman.h"
+#include "chrome_mm.h"
+#include "chrome9_3d_reg.h"
 
-#endif
 

@@ -24,21 +24,21 @@
  * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 #include "drmP.h"
-#include "via_chrome9_drm.h"
-#include "via_chrome9_drv.h"
-#include "via_chrome9_mm.h"
-#include "via_chrome9_dma.h"
-#include "via_chrome9_3d_reg.h"
-#include "via_chrome9_ttm.h"
-#include "via_chrome9_dmablit.h"
+#include "chrome_drm.h"
+#include "chrome_drv.h"
+#include "chrome_mm.h"
+#include "chrome9_dma.h"
+#include "chrome9_3d_reg.h"
+#include "chrome_ttm.h"
+#include "chrome9_dmablit.h"
 #include <ttm/ttm_bo_api.h>
 #include <ttm/ttm_bo_driver.h>
 #include <ttm/ttm_placement.h>
 #include <ttm/ttm_module.h>
 
-struct via_chrome9_ttm_backend {
+struct chrome_ttm_backend {
 	struct ttm_backend	backend; /* the class's method */
-	struct drm_via_chrome9_private	*p_priv; /* hook driver informaiton */
+	struct drm_chrome_private	*p_priv; /* hook driver informaiton */
 	unsigned long		num_pages;
 	/* series of pages' data structure for binding */
 	struct page		**pages;
@@ -53,14 +53,14 @@ struct via_chrome9_ttm_backend {
 
 
 
-static int via_chrome9_pcie_populate(struct ttm_backend *backend,
+static int chrome_pcie_populate(struct ttm_backend *backend,
 			    unsigned long num_pages, struct page **pages,
 			    struct page *dummy_read_page)
 {
-	struct via_chrome9_ttm_backend *p_backend;
+	struct chrome_ttm_backend *p_backend;
 
 	p_backend = container_of(backend,
-		struct via_chrome9_ttm_backend, backend);
+		struct chrome_ttm_backend, backend);
 
 	p_backend->populated = true;
 	p_backend->pages = pages;
@@ -70,13 +70,13 @@ static int via_chrome9_pcie_populate(struct ttm_backend *backend,
 	return 0;
 }
 
-/* The reversion of function via_chrome9_pcie_populate */
-static void via_chrome9_pcie_clear(struct ttm_backend *backend)
+/* The reversion of function chrome_pcie_populate */
+static void chrome_pcie_clear(struct ttm_backend *backend)
 {
-	struct via_chrome9_ttm_backend *p_backend;
+	struct chrome_ttm_backend *p_backend;
 
 	p_backend = container_of(backend,
-		struct via_chrome9_ttm_backend, backend);
+		struct chrome_ttm_backend, backend);
 	p_backend->bound = false;
 	p_backend->populated = false;
 	p_backend->num_pages = 0;
@@ -85,21 +85,21 @@ static void via_chrome9_pcie_clear(struct ttm_backend *backend)
 }
 
 /* Update GART table relevant entry based on the parameters */
-static int via_chrome9_pcie_bind(struct ttm_backend *backend,
+static int chrome_pcie_bind(struct ttm_backend *backend,
 	struct ttm_mem_reg *bo_mem)
 {
-	struct via_chrome9_ttm_backend *p_backend;
-	struct drm_via_chrome9_private *p_priv;
+	struct chrome_ttm_backend *p_backend;
+	struct drm_chrome_private *p_priv;
 	unsigned long entry;
 	u32 max_entries, i;
 	u8 sr6c, sr6f;
 
 	p_backend = container_of(backend,
-		struct via_chrome9_ttm_backend, backend);
+		struct chrome_ttm_backend, backend);
 	p_priv = p_backend->p_priv;
 
 	if (!p_priv || !backend) {
-		DRM_ERROR("Pass a invalid value into via_chrome9_pcie_bind.\n");
+		DRM_ERROR("Pass a invalid value into chrome_pcie_bind.\n");
 		return -EINVAL;
 	}
 
@@ -126,25 +126,25 @@ static int via_chrome9_pcie_bind(struct ttm_backend *backend,
 	 * 4.enable gart table HW protect
 	 */
 	/* 1.*/
-	VIA_CHROME9_WRITE8(0x83c4, 0x6c);
-	sr6c = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6c);
+	sr6c = CHROME_READ8(0x83c5);
 	sr6c &= 0x7F;
-	VIA_CHROME9_WRITE8(0x83c5, sr6c);
+	CHROME_WRITE8(0x83c5, sr6c);
 	/* 2.*/
 	for (i = 0; i < p_backend->num_pages; i++) {
 		writel(page_to_pfn(p_backend->pages[i]) & 0x3FFFFFFF,
 			p_priv->pcie_gart_map + entry + i);
 	}
 	/* 3.*/
-	VIA_CHROME9_WRITE8(0x83c4, 0x6f);
-	sr6f = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6f);
+	sr6f = CHROME_READ8(0x83c5);
 	sr6f |= 0x80;
-	VIA_CHROME9_WRITE8(0x83c5, sr6f);
+	CHROME_WRITE8(0x83c5, sr6f);
 	/* 4.*/
-	VIA_CHROME9_WRITE8(0x83c4, 0x6c);
-	sr6c = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6c);
+	sr6c = CHROME_READ8(0x83c5);
 	sr6c |= 0x80;
-	VIA_CHROME9_WRITE8(0x83c5, sr6c);
+	CHROME_WRITE8(0x83c5, sr6c);
 
 	/* update the flag */
 	p_backend->bound = true;
@@ -154,15 +154,15 @@ static int via_chrome9_pcie_bind(struct ttm_backend *backend,
 	
 }
 
-static int via_chrome9_pcie_unbind(struct ttm_backend *backend)
+static int chrome_pcie_unbind(struct ttm_backend *backend)
 {
-	struct via_chrome9_ttm_backend *p_backend;
-	struct drm_via_chrome9_private *p_priv;
+	struct chrome_ttm_backend *p_backend;
+	struct drm_chrome_private *p_priv;
 	unsigned long i;
 	u8 sr6c, sr6f;
 
 	p_backend = container_of(backend,
-		struct via_chrome9_ttm_backend, backend);
+		struct chrome_ttm_backend, backend);
 	p_priv = p_backend->p_priv;
 
 	if (!backend || !p_priv) {
@@ -182,25 +182,25 @@ static int via_chrome9_pcie_unbind(struct ttm_backend *backend)
 	 * 4. enable gart table HW protect
 	 */
 	/* 1.*/
-	VIA_CHROME9_WRITE8(0x83c4, 0x6c);
-	sr6c = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6c);
+	sr6c = CHROME_READ8(0x83c5);
 	sr6c &= 0x7F;
-	VIA_CHROME9_WRITE8(0x83c5, sr6c);
+	CHROME_WRITE8(0x83c5, sr6c);
 	/* 2.*/
 	for (i = 0; i < p_backend->num_pages; i++) {
 		writel(0x80000000,
 			p_priv->pcie_gart_map + p_backend->start_entry + i);
 	}
 	/* 3.*/
-	VIA_CHROME9_WRITE8(0x83c4, 0x6f);
-	sr6f = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6f);
+	sr6f = CHROME_READ8(0x83c5);
 	sr6f |= 0x80;
-	VIA_CHROME9_WRITE8(0x83c5, sr6f);
+	CHROME_WRITE8(0x83c5, sr6f);
 	/* 4.*/
-	VIA_CHROME9_WRITE8(0x83c4, 0x6c);
-	sr6c = VIA_CHROME9_READ8(0x83c5);
+	CHROME_WRITE8(0x83c4, 0x6c);
+	sr6c = CHROME_READ8(0x83c5);
 	sr6c |= 0x80;
-	VIA_CHROME9_WRITE8(0x83c5, sr6c);
+	CHROME_WRITE8(0x83c5, sr6c);
 
 	/* update some flags */
 	p_backend->bound = false;
@@ -210,44 +210,44 @@ static int via_chrome9_pcie_unbind(struct ttm_backend *backend)
 }
 
 /* unbind pcie memory first if it is bound, free the memory */
-static void via_chrome9_pcie_destroy(struct ttm_backend *backend)
+static void chrome_pcie_destroy(struct ttm_backend *backend)
 {
-	struct via_chrome9_ttm_backend *p_backend;
+	struct chrome_ttm_backend *p_backend;
 
 	p_backend = container_of(backend,
-		struct via_chrome9_ttm_backend, backend);
+		struct chrome_ttm_backend, backend);
 
 	if (p_backend->bound)
-		via_chrome9_pcie_unbind(backend);
+		chrome_pcie_unbind(backend);
 
 	kfree(p_backend);
 	p_backend = NULL;
 }
 
-static struct ttm_backend_func via_chrome9_pcie_func = {
-	.populate = via_chrome9_pcie_populate,
-	.clear = via_chrome9_pcie_clear,
-	.bind = via_chrome9_pcie_bind,
-	.unbind = via_chrome9_pcie_unbind,
-	.destroy = via_chrome9_pcie_destroy,
+static struct ttm_backend_func chrome_pcie_func = {
+	.populate = chrome_pcie_populate,
+	.clear = chrome_pcie_clear,
+	.bind = chrome_pcie_bind,
+	.unbind = chrome_pcie_unbind,
+	.destroy = chrome_pcie_destroy,
 };
 
-/* allocate memory for struct via_chrome9_ttm_backend and do intialization */
+/* allocate memory for struct chrome_ttm_backend and do intialization */
 struct ttm_backend *
-via_chrome9_pcie_backend_init(struct drm_via_chrome9_private *p_priv)
+chrome_pcie_backend_init(struct drm_chrome_private *p_priv)
 {
-	struct via_chrome9_ttm_backend *p_backend;
+	struct chrome_ttm_backend *p_backend;
 
 	if (!p_priv)
 		return 0;
 
-	p_backend = kzalloc(sizeof(struct via_chrome9_ttm_backend), GFP_KERNEL);
+	p_backend = kzalloc(sizeof(struct chrome_ttm_backend), GFP_KERNEL);
 	if (!p_backend)
 		return 0;
 
 	p_backend->backend.bdev = &p_priv->bdev;
 	p_backend->backend.flags = 0;
-	p_backend->backend.func = &via_chrome9_pcie_func;
+	p_backend->backend.func = &chrome_pcie_func;
 	p_backend->bound = false;
 	p_backend->populated = false;
 	p_backend->p_priv = p_priv;

@@ -28,7 +28,7 @@
 #define _CHROME_DRV_H_
 
 #include "drm_sman.h"
-#include "chrome_verifier.h"
+#include "chrome9_verifier.h"
 #include "ttm/ttm_bo_api.h"
 #include "ttm/ttm_bo_driver.h"
 #include "ttm/ttm_placement.h"
@@ -38,8 +38,8 @@
 #define DRIVER_AUTHOR	"Various"
 
 #define DRIVER_NAME		"chrome"
-#define DRIVER_DESC		"CHROME Pro"
-#define DRIVER_DATE		"20091016"
+#define DRIVER_DESC		"CHROME"
+#define DRIVER_DATE		"20110401"
 
 #define DRIVER_MAJOR		1
 #define DRIVER_MINOR		1	
@@ -99,15 +99,24 @@ struct drm_chrome_private {
 	struct ttm_bo_device bdev;
 	struct drm_device *ddev;
 
+    /*memory*/
 	uint64_t vram_start;	/* vram physical bus address */
 	uint64_t vram_size;	/* M byte */
 	int vram_mtrr;
+    u8 vram_type;
+
+
+    /* Chrome1 */
+    
+
+    /* Chrome9 */
 	uint64_t ring_buffer_size;	/* Byte */
 	uint64_t pcie_mem_size;	/* Byte */
 	uint64_t pcie_gart_start;	/* offset from vram */
 
 	u8 __iomem *mmio_map;
 	u32 *pcie_gart_map;	/* kernel virtual address for accessing gart */
+
 	/* kernel virtual address for accessing ringbuffer */
 	u32 *pcie_ringbuffer_map;
 	bool need_dma32;
