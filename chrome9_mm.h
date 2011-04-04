@@ -24,13 +24,9 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
  * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _CHROME_GEM_H_
-#define _CHROME_GEM_H_
+#ifndef _VIA_CHROME9_MM_H_
+#define _VIA_CHROME9_MM_H_
 
-extern int 
-chrome_gem_object_create(struct drm_device *dev, int size,
-			     int alignment, int initial_domain,
-			     bool kernel,
-			     bool interruptible,
-			     struct drm_gem_object **obj);
+
 #endif
+

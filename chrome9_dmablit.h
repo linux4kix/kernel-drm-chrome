@@ -1,6 +1,5 @@
 /*
  * Copyright 1998-2003 VIA Technologies, Inc. All Rights Reserved.
- * Copyright 2001-2003 S3 Graphics, Inc. All Rights Reserved.
  *
  * Permission is hereby granted, free of charge, to any person
  * obtaining a copy of this software and associated documentation
@@ -24,13 +23,9 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
  * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _CHROME_GEM_H_
-#define _CHROME_GEM_H_
+#ifndef _VIA_CHROME9_DMABLIT_H_
+#define _VIA_CHROME9_DMABLIT_H_
 
-extern int 
-chrome_gem_object_create(struct drm_device *dev, int size,
-			     int alignment, int initial_domain,
-			     bool kernel,
-			     bool interruptible,
-			     struct drm_gem_object **obj);
+extern void via_chrome9_init_dmablit(struct drm_device *dev);
+extern void via_chrome9_dmablit_fini(struct drm_device *dev);
 #endif

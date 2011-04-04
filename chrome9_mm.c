@@ -24,13 +24,12 @@
  * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
  * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-#ifndef _CHROME_GEM_H_
-#define _CHROME_GEM_H_
 
-extern int 
-chrome_gem_object_create(struct drm_device *dev, int size,
-			     int alignment, int initial_domain,
-			     bool kernel,
-			     bool interruptible,
-			     struct drm_gem_object **obj);
-#endif
+#include "drmP.h"
+#include "via_chrome9_drm.h"
+#include "via_chrome9_drv.h"
+#include "drm_sman.h"
+#include "via_chrome9_mm.h"
+#include "via_chrome9_3d_reg.h"
+
+
