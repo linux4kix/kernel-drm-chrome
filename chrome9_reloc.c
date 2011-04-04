@@ -202,7 +202,7 @@ chrome_validate_bo(struct drm_device *dev, struct drm_file *file_priv,
 		if (!((parse->reloc_buffer[i].vobj->bo.mem.placement & entry->location_mask) &
 					TTM_PL_MASK_MEM)){
 
-			via_ttm_placement_from_domain(parse->reloc_buffer[i].vobj,
+			chrome_ttm_placement_from_domain(parse->reloc_buffer[i].vobj,
 				entry->location_mask);
 retry:
 			/* validate the ttm buffer with proposed placement */

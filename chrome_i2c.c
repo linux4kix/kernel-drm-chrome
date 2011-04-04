@@ -10,9 +10,9 @@
 #include "drm_crtc_helper.h"
 
 #include "crtc_hw.h"
-#include "via_drv.h"
+#include "chrome_drv.h"
 
-struct via_i2c_adap {
+struct chrome_i2c_adap {
 	struct i2c_algo_bit_data algo;
 	struct i2c_adapter adapter;
 	void __iomem *port;
@@ -20,7 +20,7 @@ struct via_i2c_adap {
 	bool gpio;
 };
 
-static struct via_i2c_adap via_gpio[5];
+static struct chrome_i2c_adap chrome_gpio[5];
 
 /*[VIA_PORT_26]   = { VIA_PORT_I2C,  VIA_MODE_I2C, VIASR, 0x26 },
 [VIA_PORT_31]   = { VIA_PORT_I2C,  VIA_MODE_I2C, VIASR, 0x31 },
@@ -30,9 +30,9 @@ static struct via_i2c_adap via_gpio[5];
 */
 
 static void
-via_setscl(void *data, int state)
+chrome_setscl(void *data, int state)
 {
-	struct via_i2c_adap *adap_data = data;
+	struct chrome_i2c_adap *adap_data = data;
 	u8 val;
 
 	iowrite8(adap_data->index, adap_data->port);
@@ -53,9 +53,9 @@ via_setscl(void *data, int state)
 }
 
 static int 
-via_getscl(void *data)
+chrome_getscl(void *data)
 {
-	struct via_i2c_adap *adap_data = data;
+	struct chrome_i2c_adap *adap_data = data;
 
 	iowrite8(adap_data->index, adap_data->port);
         if (ioread8(adap_data->port + 1) & 0x08)
@@ -64,9 +64,9 @@ via_getscl(void *data)
 }
 
 static void
-via_setsda(void *data, int state)
+chrome_setsda(void *data, int state)
 {
-	struct via_i2c_adap *adap_data = data;
+	struct chrome_i2c_adap *adap_data = data;
 	u8 val;
 
 	iowrite8(adap_data->index, adap_data->port);
@@ -87,9 +87,9 @@ via_setsda(void *data, int state)
 }
 
 static int 
-via_getsda(void *data)
+chrome_getsda(void *data)
 {
-	struct via_i2c_adap *adap_data = data;
+	struct chrome_i2c_adap *adap_data = data;
 
 	iowrite8(adap_data->index, adap_data->port);
         if (ioread8(adap_data->port + 1) & 0x04)
@@ -98,7 +98,7 @@ via_getsda(void *data)
 }
 
 static int
-via_setup_i2c_bus(struct via_i2c_adap *adap, const char *name,
+chrome_setup_i2c_bus(struct chrome_i2c_adap *adap, const char *name,
 			struct drm_device *dev)
 {
 	int rc;
@@ -107,10 +107,10 @@ via_setup_i2c_bus(struct via_i2c_adap *adap, const char *name,
 	adap->adapter.owner		= THIS_MODULE;
 	adap->adapter.algo_data		= &adap->algo;
 	adap->adapter.dev.parent	= &dev->pdev->dev;
-	adap->algo.setsda		= via_setsda;
-	adap->algo.setscl		= via_setscl;
-	adap->algo.getsda		= via_getsda;
-	adap->algo.getscl		= via_getscl;
+	adap->algo.setsda		= chrome_setsda;
+	adap->algo.setscl		= chrome_setscl;
+	adap->algo.getsda		= chrome_getsda;
+	adap->algo.getscl		= chrome_getscl;
 	adap->algo.udelay		= 10;
 	adap->algo.timeout		= msecs_to_jiffies(500);
 	adap->algo.data 		= adap;
@@ -124,42 +124,42 @@ via_setup_i2c_bus(struct via_i2c_adap *adap, const char *name,
 }
 
 int 
-via_encoder_probe(struct drm_device *dev, int encoder, void __iomem *iobase,
+chrome_encoder_probe(struct drm_device *dev, int encoder, void __iomem *iobase,
 			unsigned int index)
 {
-	struct via_i2c_adap *adap = &via_gpio[encoder];
+	struct chrome_i2c_adap *adap = &chrome_gpio[encoder];
 	int ret = 0;
 
 	adap->port = iobase;
 	adap->index = index;
 	adap->gpio = false;
-	ret = via_setup_i2c_bus(adap, "VIA I2C CRT", dev);
+	ret = chrome_setup_i2c_bus(adap, "VIA I2C CRT", dev);
 	return ret;
 }
 
 void
-via_encoder_destroy(struct drm_device *dev, int connector_type)
+chrome_encoder_destroy(struct drm_device *dev, int connector_type)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	struct i2c_adapter *adapter = NULL;
 
 	if (connector_type == DRM_MODE_CONNECTOR_VGA)
-		adapter = &via_gpio[0].adapter;
+		adapter = &chrome_gpio[0].adapter;
 
 	if (adapter)
 		i2c_del_adapter(adapter);
 }
 
-int via_get_modes(struct drm_connector *connector)
+int chrome_get_modes(struct drm_connector *connector)
 {
 	struct drm_device *dev = connector->dev;
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	struct i2c_adapter *adapter = NULL;
 	struct edid *edid;
 	int ret = 0;
 
 	if (connector->connector_type == DRM_MODE_CONNECTOR_VGA)
-		adapter = &via_gpio[0].adapter;
+		adapter = &chrome_gpio[0].adapter;
 
 	if (adapter) {
 		edid = drm_get_edid(connector, adapter);

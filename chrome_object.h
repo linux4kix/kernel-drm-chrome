@@ -29,7 +29,7 @@
 #include "ttm/ttm_bo_api.h"
 extern int chrome_allocate_basic_bo(struct drm_device *dev);
 
-extern void via_ttm_placement_from_domain(struct chrome_object *vbo,
+extern void chrome_ttm_placement_from_domain(struct chrome_object *vbo,
 				u32 domain);
 
 extern int chrome_buffer_object_create(struct ttm_bo_device *bdev,

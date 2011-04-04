@@ -22,13 +22,13 @@
  */
 
 #include "drmP.h"
-#include "via_drm.h"
-#include "via_drv.h"
+#include "chrome_drm.h"
+#include "chrome_drv.h"
 
 #include "drm_pciids.h"
 
 static int
-cle266_mem_type(struct drm_via_private *dev_priv, struct pci_dev *bridge)
+cle266_mem_type(struct drm_chrome_private *dev_priv, struct pci_dev *bridge)
 {
 	u8 type, fsb, freq;
 	int ret;
@@ -126,7 +126,7 @@ cle266_mem_type(struct drm_via_private *dev_priv, struct pci_dev *bridge)
 }
 
 static int
-km400_mem_type(struct drm_via_private *dev_priv, struct pci_dev *bridge)
+km400_mem_type(struct drm_chrome_private *dev_priv, struct pci_dev *bridge)
 {
 	u8 fsb, freq, rev;
 	int ret;
@@ -276,7 +276,7 @@ km400_mem_type(struct drm_via_private *dev_priv, struct pci_dev *bridge)
 }
 
 static int
-p4m800_mem_type(struct drm_via_private *dev_priv, struct pci_bus *bus,
+p4m800_mem_type(struct drm_chrome_private *dev_priv, struct pci_bus *bus,
 		struct pci_dev *fn3)
 {
 	struct pci_dev *fn4 = pci_get_slot(bus, PCI_DEVFN(0, 4));
@@ -342,7 +342,7 @@ p4m800_mem_type(struct drm_via_private *dev_priv, struct pci_bus *bus,
 }
 
 static int
-km8xx_mem_type(struct drm_via_private *dev_priv)
+km8xx_mem_type(struct drm_chrome_private *dev_priv)
 {
 	struct pci_dev *dram, *misc;
 	int ret = -ENXIO;
@@ -466,7 +466,7 @@ km8xx_mem_type(struct drm_via_private *dev_priv)
 }
 
 static int
-cn400_mem_type(struct drm_via_private *dev_priv, struct pci_bus *bus,
+cn400_mem_type(struct drm_chrome_private *dev_priv, struct pci_bus *bus,
 		struct pci_dev *fn3)
 {
 	struct pci_dev *fn2 = pci_get_slot(bus, PCI_DEVFN(0, 2));
@@ -528,7 +528,7 @@ cn400_mem_type(struct drm_via_private *dev_priv, struct pci_bus *bus,
 }
 
 static int
-cn700_mem_type(struct drm_via_private *dev_priv, struct pci_dev *fn3)
+cn700_mem_type(struct drm_chrome_private *dev_priv, struct pci_dev *fn3)
 {
 	int ret;
 	u8 tmp;
@@ -561,7 +561,7 @@ cn700_mem_type(struct drm_via_private *dev_priv, struct pci_dev *fn3)
 }
 
 static int
-cx700_mem_type(struct drm_via_private *dev_priv, struct pci_dev *fn3)
+cx700_mem_type(struct drm_chrome_private *dev_priv, struct pci_dev *fn3)
 {
 	u8 type, clock;
 	int ret;
@@ -610,9 +610,9 @@ cx700_mem_type(struct drm_via_private *dev_priv, struct pci_dev *fn3)
 	return ret;
 }
 
-int via_detect_vram(struct drm_device *dev)
+int chrome_detect_vram(struct drm_device *dev)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	struct pci_dev *bridge = NULL, *fn3 = NULL;
 	u8 type = VIA_MEM_NONE, size;
 	int vram_size = 0, ret = 0;

@@ -37,6 +37,11 @@
 #define RING_BUFFER_INIT_FLAG 1
 #define RING_BUFFER_CLEANUP_FLAG 2
 
+int chrome_modeset = 0;
+
+MODULE_PARM_DESC(modeset, "Disable/Enable modesetting");
+module_param_named(modeset, chrome_modeset, int, 0400);
+
 int chrome_drm_get_pci_id(struct drm_device *dev,
 	void *data, struct drm_file *file_priv)
 {
@@ -146,6 +151,8 @@ static struct drm_driver driver = {
 static int __init chrome_init(void)
 {
 	driver.num_ioctls = chrome_max_ioctl;
+	if (chrome_modeset)
+		driver.driver_features |= DRIVER_MODESET;
 	return drm_init(&driver);
 }
 

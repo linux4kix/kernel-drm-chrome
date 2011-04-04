@@ -26,9 +26,9 @@
  */
 
 #include "drmP.h"
-#include "via_drv.h"
+#include "chrome_drv.h"
 
-void via_init_futex(struct drm_via_private *dev_priv)
+void chrome_init_futex(struct drm_chrome_private *dev_priv)
 {
 	unsigned int i;
 
@@ -40,11 +40,11 @@ void via_init_futex(struct drm_via_private *dev_priv)
 	}
 }
 
-void via_cleanup_futex(struct drm_via_private *dev_priv)
+void chrome_cleanup_futex(struct drm_chrome_private *dev_priv)
 {
 }
 
-void via_release_futex(struct drm_via_private *dev_priv, int context)
+void chrome_release_futex(struct drm_chrome_private *dev_priv, int context)
 {
 	unsigned int i;
 	volatile int *lock;
@@ -64,12 +64,12 @@ void via_release_futex(struct drm_via_private *dev_priv, int context)
 	}
 }
 
-int via_decoder_futex(struct drm_device *dev, void *data, struct drm_file *file_priv)
+int chrome_decoder_futex(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	drm_via_futex_t *fx = data;
+	drm_chrome_futex_t *fx = data;
 	volatile int *lock;
-	struct drm_via_private *dev_priv = dev->dev_private;
-	drm_via_sarea_t *sAPriv = dev_priv->sarea_priv;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
+	drm_chrome_sarea_t *sAPriv = dev_priv->sarea_priv;
 	int ret = 0;
 
 	DRM_DEBUG("\n");

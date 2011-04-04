@@ -23,20 +23,20 @@
  */
 
 #include "drmP.h"
-#include "via_drv.h"
+#include "chrome_drv.h"
 #include "drm_pciids.h"
 
-int via_modeset = 0;
+int chrome_modeset = 0;
 
 MODULE_PARM_DESC(modeset, "Disable/Enable modesetting");
-module_param_named(modeset, via_modeset, int, 0400);
+module_param_named(modeset, chrome_modeset, int, 0400);
 
-static struct pci_device_id via_pci_table[] __devinitdata = {
+static struct pci_device_id chrome_pci_table[] __devinitdata = {
 	viadrv_PCI_IDS,
 };
-MODULE_DEVICE_TABLE(pci, via_pci_table);
+MODULE_DEVICE_TABLE(pci, chrome_pci_table);
 
-static struct drm_driver via_driver;
+static struct drm_driver chrome_driver;
 
 #define VIA_AGP_MODE_MASK	0x17
 #define VIA_AGPV3_MODE		0x08
@@ -47,9 +47,9 @@ static struct drm_driver via_driver;
 #define VIA_AGP_1X_MODE		0x01
 #define VIA_AGP_FW_MODE		0x10
 
-static int via_detect_agp(struct drm_device *dev)
+static int chrome_detect_agp(struct drm_device *dev)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	struct drm_agp_info agp_info;
 	struct drm_agp_mode mode;
 	int ret = 0;
@@ -94,9 +94,9 @@ out_err0:
 
 #define VIA_MMIO_REGSIZE 0x9000
 
-static int via_mmio_setup(struct drm_device *dev)
+static int chrome_mmio_setup(struct drm_device *dev)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	int ret, len = pci_resource_len(dev->pdev, 1);
 	struct ttm_buffer_object *bo;
 
@@ -107,7 +107,7 @@ static int via_mmio_setup(struct drm_device *dev)
 
 	ret = ttm_bo_allocate(&dev_priv->bdev, VIA_MMIO_REGSIZE, ttm_bo_type_kernel,
 				TTM_PL_FLAG_PRIV0, 1, PAGE_SIZE,
-				0, false, via_ttm_bo_destroy,
+				0, false, chrome_ttm_bo_destroy,
 				NULL, &bo);
 	if (ret)
 		goto err;
@@ -129,13 +129,13 @@ err:
 	return ret;
 }
 
-static int via_driver_unload(struct drm_device *dev)
+static int chrome_driver_unload(struct drm_device *dev)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	struct ttm_buffer_object *bo = dev_priv->mmio.bo;
 	int ret = 0;
 
-	ret = via_dma_cleanup(dev);
+	ret = chrome_dma_cleanup(dev);
 	if (ret)
 		return ret;
 
@@ -162,12 +162,12 @@ static int via_driver_unload(struct drm_device *dev)
 	return ret;
 }
 
-static int via_driver_load(struct drm_device *dev, unsigned long chipset)
+static int chrome_driver_load(struct drm_device *dev, unsigned long chipset)
 {
-	struct drm_via_private *dev_priv;
+	struct drm_chrome_private *dev_priv;
 	int ret = 0;
 
-	dev_priv = kzalloc(sizeof(struct drm_via_private), GFP_KERNEL);
+	dev_priv = kzalloc(sizeof(struct drm_chrome_private), GFP_KERNEL);
 	if (dev_priv == NULL)
 		return -ENOMEM;
 
@@ -175,28 +175,28 @@ static int via_driver_load(struct drm_device *dev, unsigned long chipset)
 	dev_priv->chipset = chipset;
 	dev_priv->dev = dev;
 
-	ret = via_ttm_init(dev_priv);
+	ret = chrome_ttm_init(dev_priv);
 	if (ret)
 		goto out_err;
 
-	ret = via_mmio_setup(dev);
+	ret = chrome_mmio_setup(dev);
 	if (ret) {
 		DRM_INFO("VIA MMIO region failed to map\n");
 		goto out_err;
 	}
 
-	ret = via_detect_vram(dev);
+	ret = chrome_detect_vram(dev);
 	if (ret)
 		goto out_err;
 
 	if (dev->agp && drm_pci_device_is_agp(dev)) {
-		ret = via_detect_agp(dev);
+		ret = chrome_detect_agp(dev);
 		if (ret)
 			goto out_err;
 	}
 
 	if (dev->driver->driver_features & DRIVER_MODESET) {
-		ret = via_modeset_init(dev);
+		ret = chrome_modeset_init(dev);
 		if (ret)
 			goto out_err;
 	}
@@ -204,36 +204,36 @@ static int via_driver_load(struct drm_device *dev, unsigned long chipset)
 	ret = drm_vblank_init(dev, 1);
 out_err:
 	if (ret)
-		via_driver_unload(dev);
+		chrome_driver_unload(dev);
 	return ret;
 }
 
-static int via_final_context(struct drm_device *dev, int context)
+static int chrome_final_context(struct drm_device *dev, int context)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 
-	via_release_futex(dev_priv, context);
+	chrome_release_futex(dev_priv, context);
 
 	/* Linux specific until context tracking code gets ported to BSD */
 	/* Last context, perform cleanup */
 	if (dev->ctx_count == 1 && dev->dev_private) {
 		DRM_DEBUG("Last Context\n");
 		drm_irq_uninstall(dev);
-		via_cleanup_futex(dev_priv);
-		via_dma_cleanup(dev);
+		chrome_cleanup_futex(dev_priv);
+		chrome_dma_cleanup(dev);
 	}
 	return 1;
 }
 
-static void via_lastclose(struct drm_device *dev)
+static void chrome_lastclose(struct drm_device *dev)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 
 	if (!dev_priv)
 		return;
 }
 
-static void via_reclaim_buffers_locked(struct drm_device *dev,
+static void chrome_reclaim_buffers_locked(struct drm_device *dev,
                                 struct drm_file *file_priv)
 {
 	mutex_lock(&dev->struct_mutex);
@@ -245,27 +245,27 @@ static void via_reclaim_buffers_locked(struct drm_device *dev,
 	return;
 }
 
-static struct drm_driver via_driver = {
+static struct drm_driver chrome_driver = {
 	.driver_features =
 		DRIVER_USE_AGP | DRIVER_USE_MTRR | DRIVER_HAVE_IRQ |
 		DRIVER_GEM | DRIVER_IRQ_SHARED,
-	.load = via_driver_load,
-	.unload = via_driver_unload,
-	.context_dtor = via_final_context,
-	.get_vblank_counter = via_get_vblank_counter,
-	.enable_vblank = via_enable_vblank,
-	.disable_vblank = via_disable_vblank,
-	.irq_preinstall = via_driver_irq_preinstall,
-	.irq_postinstall = via_driver_irq_postinstall,
-	.irq_uninstall = via_driver_irq_uninstall,
-	.irq_handler = via_driver_irq_handler,
-	.dma_quiescent = via_driver_dma_quiescent,
+	.load = chrome_driver_load,
+	.unload = chrome_driver_unload,
+	.context_dtor = chrome_final_context,
+	.get_vblank_counter = chrome_get_vblank_counter,
+	.enable_vblank = chrome_enable_vblank,
+	.disable_vblank = chrome_disable_vblank,
+	.irq_preinstall = chrome_driver_irq_preinstall,
+	.irq_postinstall = chrome_driver_irq_postinstall,
+	.irq_uninstall = chrome_driver_irq_uninstall,
+	.irq_handler = chrome_driver_irq_handler,
+	.dma_quiescent = chrome_driver_dma_quiescent,
 	.reclaim_buffers = drm_core_reclaim_buffers,
 	.reclaim_buffers_locked = NULL,
-	.reclaim_buffers_idlelocked = via_reclaim_buffers_locked,
-	.lastclose = via_lastclose,
-	.gem_init_object = via_gem_init_object,
-	.ioctls = via_ioctls,
+	.reclaim_buffers_idlelocked = chrome_reclaim_buffers_locked,
+	.lastclose = chrome_lastclose,
+	.gem_init_object = chrome_gem_init_object,
+	.ioctls = chrome_ioctls,
 	.fops = {
 		.owner = THIS_MODULE,
 		.open = drm_open,
@@ -286,13 +286,13 @@ static struct drm_driver via_driver = {
 };
 
 static int __devinit
-via_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
+chrome_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
-	return drm_get_pci_dev(pdev, ent, &via_driver);
+	return drm_get_pci_dev(pdev, ent, &chrome_driver);
 }
 
 static void __devexit
-via_pci_remove(struct pci_dev *pdev)
+chrome_pci_remove(struct pci_dev *pdev)
 {
 	struct drm_device *dev = pci_get_drvdata(pdev);
 
@@ -300,45 +300,45 @@ via_pci_remove(struct pci_dev *pdev)
 }
 
 #ifdef CONFIG_PM
-int via_pci_suspend(struct pci_dev *pdev, pm_message_t state)
+int chrome_pci_suspend(struct pci_dev *pdev, pm_message_t state)
 {
 	return 0;
 }
 
-int via_pci_resume(struct pci_dev *pdev)
+int chrome_pci_resume(struct pci_dev *pdev)
 {
 	return 0;
 }
 #endif
 
-static struct pci_driver via_pci_driver = {
+static struct pci_driver chrome_pci_driver = {
 	.name = DRIVER_NAME,
-	.id_table = via_pci_table,
-	.probe	= via_pci_probe,
-	.remove	= __devexit_p(via_pci_remove),
+	.id_table = chrome_pci_table,
+	.probe	= chrome_pci_probe,
+	.remove	= __devexit_p(chrome_pci_remove),
 #ifdef CONFIG_PM
-	.suspend = via_pci_suspend,
-	.resume = via_pci_resume,
+	.suspend = chrome_pci_suspend,
+	.resume = chrome_pci_resume,
 #endif
 };
 
-static int __init via_init(void)
+static int __init chrome_init(void)
 {
-	via_driver.num_ioctls = via_max_ioctl;
-	via_init_command_verifier();
+	chrome_driver.num_ioctls = chrome_max_ioctl;
+	chrome_init_command_verifier();
 
-	if (via_modeset)
-		via_driver.driver_features |= DRIVER_MODESET;
-	return drm_pci_init(&via_driver, &via_pci_driver);
+	if (chrome_modeset)
+		chrome_driver.driver_features |= DRIVER_MODESET;
+	return drm_pci_init(&chrome_driver, &chrome_pci_driver);
 }
 
-static void __exit via_exit(void)
+static void __exit chrome_exit(void)
 {
-	drm_pci_exit(&via_driver, &via_pci_driver);
+	drm_pci_exit(&chrome_driver, &chrome_pci_driver);
 }
 
-module_init(via_init);
-module_exit(via_exit);
+module_init(chrome_init);
+module_exit(chrome_exit);
 
 MODULE_AUTHOR(DRIVER_AUTHOR);
 MODULE_DESCRIPTION(DRIVER_DESC);

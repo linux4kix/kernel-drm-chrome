@@ -28,10 +28,10 @@
  * be very slow.
  */
 
-#include "via_3d_reg.h"
+#include "chrome_3d_reg.h"
 #include "drmP.h"
 #include "drm.h"
-#include "via_drv.h"
+#include "chrome_drv.h"
 
 typedef enum {
 	state_command,
@@ -79,7 +79,7 @@ typedef enum {
  * that does not include any part of the address.
  */
 
-static drm_via_sequence_t seqs[] = {
+static drm_chrome_sequence_t seqs[] = {
 	no_sequence,
 	no_sequence,
 	no_sequence,
@@ -250,7 +250,7 @@ eat_words(const uint32_t **buf, const uint32_t *buf_end, unsigned num_words)
  * Partially stolen from drm_memory.h
  */
 
-static __inline__ drm_local_map_t *via_drm_lookup_agp_map(drm_via_state_t *seq,
+static __inline__ drm_local_map_t *chrome_drm_lookup_agp_map(drm_chrome_state_t *seq,
 						    unsigned long offset,
 						    unsigned long size,
 						    struct drm_device *dev)
@@ -283,11 +283,11 @@ static __inline__ drm_local_map_t *via_drm_lookup_agp_map(drm_via_state_t *seq,
  * be mappable by the client. This is not a big restriction.
  * FIXME: To actually enforce this security policy strictly, drm_rmmap
  * would have to wait for dma quiescent before removing an AGP map.
- * The via_drm_lookup_agp_map call in reality seems to take
+ * The chrome_drm_lookup_agp_map call in reality seems to take
  * very little CPU time.
  */
 
-static __inline__ int finish_current_sequence(drm_via_state_t * cur_seq)
+static __inline__ int finish_current_sequence(drm_chrome_state_t * cur_seq)
 {
 	switch (cur_seq->unfinished) {
 	case z_address:
@@ -329,7 +329,7 @@ static __inline__ int finish_current_sequence(drm_via_state_t * cur_seq)
 					hi = tmp;
 			}
 
-			if (!via_drm_lookup_agp_map
+			if (!chrome_drm_lookup_agp_map
 			    (cur_seq, lo, hi - lo, cur_seq->dev)) {
 				DRM_ERROR
 				    ("AGP texture is not in allowed map\n");
@@ -345,7 +345,7 @@ static __inline__ int finish_current_sequence(drm_via_state_t * cur_seq)
 }
 
 static __inline__ int
-investigate_hazard(uint32_t cmd, hazard_t hz, drm_via_state_t *cur_seq)
+investigate_hazard(uint32_t cmd, hazard_t hz, drm_chrome_state_t *cur_seq)
 {
 	register uint32_t tmp, *tmp_addr;
 
@@ -518,11 +518,11 @@ investigate_hazard(uint32_t cmd, hazard_t hz, drm_via_state_t *cur_seq)
 }
 
 static __inline__ int
-via_check_prim_list(uint32_t const **buffer, const uint32_t * buf_end,
-		    drm_via_state_t *cur_seq)
+chrome_check_prim_list(uint32_t const **buffer, const uint32_t * buf_end,
+		    drm_chrome_state_t *cur_seq)
 {
-	struct drm_via_private *dev_priv =
-	    (struct drm_via_private *) cur_seq->dev->dev_private;
+	struct drm_chrome_private *dev_priv =
+	    (struct drm_chrome_private *) cur_seq->dev->dev_private;
 	uint32_t a_fire, bcmd, dw_count;
 	int ret = 0;
 	int have_fire;
@@ -622,8 +622,8 @@ via_check_prim_list(uint32_t const **buffer, const uint32_t * buf_end,
 }
 
 static __inline__ verifier_state_t
-via_check_header2(uint32_t const **buffer, const uint32_t *buf_end,
-		  drm_via_state_t *hc_state)
+chrome_check_header2(uint32_t const **buffer, const uint32_t *buf_end,
+		  drm_chrome_state_t *hc_state)
 {
 	uint32_t cmd;
 	int hz_mode;
@@ -641,7 +641,7 @@ via_check_header2(uint32_t const **buffer, const uint32_t *buf_end,
 
 	switch (cmd) {
 	case HC_ParaType_CmdVdata:
-		if (via_check_prim_list(&buf, buf_end, hc_state))
+		if (chrome_check_prim_list(&buf, buf_end, hc_state))
 			return state_error;
 		*buffer = buf;
 		return state_command;
@@ -714,7 +714,7 @@ via_check_header2(uint32_t const **buffer, const uint32_t *buf_end,
 }
 
 static __inline__ verifier_state_t
-via_parse_header2(struct drm_via_private *dev_priv, uint32_t const **buffer,
+chrome_parse_header2(struct drm_chrome_private *dev_priv, uint32_t const **buffer,
 		  const uint32_t *buf_end, int *fire_count)
 {
 	uint32_t cmd;
@@ -803,7 +803,7 @@ verify_video_tail(uint32_t const **buffer, const uint32_t * buf_end,
 }
 
 static __inline__ verifier_state_t
-via_check_header1(uint32_t const **buffer, const uint32_t * buf_end)
+chrome_check_header1(uint32_t const **buffer, const uint32_t * buf_end)
 {
 	uint32_t cmd;
 	const uint32_t *buf = *buffer;
@@ -835,7 +835,7 @@ via_check_header1(uint32_t const **buffer, const uint32_t * buf_end)
 }
 
 static __inline__ verifier_state_t
-via_parse_header1(struct drm_via_private *dev_priv, uint32_t const **buffer,
+chrome_parse_header1(struct drm_chrome_private *dev_priv, uint32_t const **buffer,
 		  const uint32_t *buf_end)
 {
 	register uint32_t cmd;
@@ -854,7 +854,7 @@ via_parse_header1(struct drm_via_private *dev_priv, uint32_t const **buffer,
 }
 
 static __inline__ verifier_state_t
-via_check_vheader5(uint32_t const **buffer, const uint32_t *buf_end)
+chrome_check_vheader5(uint32_t const **buffer, const uint32_t *buf_end)
 {
 	uint32_t data;
 	const uint32_t *buf = *buffer;
@@ -887,7 +887,7 @@ via_check_vheader5(uint32_t const **buffer, const uint32_t *buf_end)
 }
 
 static __inline__ verifier_state_t
-via_parse_vheader5(struct drm_via_private *dev_priv, uint32_t const **buffer,
+chrome_parse_vheader5(struct drm_chrome_private *dev_priv, uint32_t const **buffer,
 		   const uint32_t *buf_end)
 {
 	uint32_t addr, count, i;
@@ -905,7 +905,7 @@ via_parse_vheader5(struct drm_via_private *dev_priv, uint32_t const **buffer,
 }
 
 static __inline__ verifier_state_t
-via_check_vheader6(uint32_t const **buffer, const uint32_t * buf_end)
+chrome_check_vheader6(uint32_t const **buffer, const uint32_t * buf_end)
 {
 	uint32_t data;
 	const uint32_t *buf = *buffer;
@@ -942,7 +942,7 @@ via_check_vheader6(uint32_t const **buffer, const uint32_t * buf_end)
 }
 
 static __inline__ verifier_state_t
-via_parse_vheader6(struct drm_via_private *dev_priv, uint32_t const **buffer,
+chrome_parse_vheader6(struct drm_chrome_private *dev_priv, uint32_t const **buffer,
 		   const uint32_t *buf_end)
 {
 
@@ -963,13 +963,13 @@ via_parse_vheader6(struct drm_via_private *dev_priv, uint32_t const **buffer,
 }
 
 int
-via_verify_command_stream(const uint32_t * buf, unsigned int size,
+chrome_verify_command_stream(const uint32_t * buf, unsigned int size,
 			  struct drm_device * dev, int agp)
 {
 
-	struct drm_via_private *dev_priv = dev->dev_private;
-	drm_via_state_t *hc_state = &dev_priv->hc_state;
-	drm_via_state_t saved_state = *hc_state;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
+	drm_chrome_state_t *hc_state = &dev_priv->hc_state;
+	drm_chrome_state_t saved_state = *hc_state;
 	uint32_t cmd;
 	const uint32_t *buf_end = buf + (size >> 2);
 	verifier_state_t state = state_command;
@@ -992,16 +992,16 @@ via_verify_command_stream(const uint32_t * buf, unsigned int size,
 
 		switch (state) {
 		case state_header2:
-			state = via_check_header2(&buf, buf_end, hc_state);
+			state = chrome_check_header2(&buf, buf_end, hc_state);
 			break;
 		case state_header1:
-			state = via_check_header1(&buf, buf_end);
+			state = chrome_check_header1(&buf, buf_end);
 			break;
 		case state_vheader5:
-			state = via_check_vheader5(&buf, buf_end);
+			state = chrome_check_vheader5(&buf, buf_end);
 			break;
 		case state_vheader6:
-			state = via_check_vheader6(&buf, buf_end);
+			state = chrome_check_vheader6(&buf, buf_end);
 			break;
 		case state_command:
 			if ((HALCYON_HEADER2 == (cmd = *buf)) &&
@@ -1039,11 +1039,11 @@ via_verify_command_stream(const uint32_t * buf, unsigned int size,
 }
 
 int
-via_parse_command_stream(struct drm_device *dev, const uint32_t *buf,
+chrome_parse_command_stream(struct drm_device *dev, const uint32_t *buf,
 			 unsigned int size)
 {
 
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	uint32_t cmd;
 	const uint32_t *buf_end = buf + (size >> 2);
 	verifier_state_t state = state_command;
@@ -1054,17 +1054,17 @@ via_parse_command_stream(struct drm_device *dev, const uint32_t *buf,
 		switch (state) {
 		case state_header2:
 			state =
-			    via_parse_header2(dev_priv, &buf, buf_end,
+			    chrome_parse_header2(dev_priv, &buf, buf_end,
 					      &fire_count);
 			break;
 		case state_header1:
-			state = via_parse_header1(dev_priv, &buf, buf_end);
+			state = chrome_parse_header1(dev_priv, &buf, buf_end);
 			break;
 		case state_vheader5:
-			state = via_parse_vheader5(dev_priv, &buf, buf_end);
+			state = chrome_parse_vheader5(dev_priv, &buf, buf_end);
 			break;
 		case state_vheader6:
-			state = via_parse_vheader6(dev_priv, &buf, buf_end);
+			state = chrome_parse_vheader6(dev_priv, &buf, buf_end);
 			break;
 		case state_command:
 			if (HALCYON_HEADER2 == (cmd = *buf))
@@ -1104,7 +1104,7 @@ setup_hazard_table(hz_init_t init_table[], hazard_t table[], int size)
 		table[init_table[i].code] = init_table[i].hz;
 }
 
-void via_init_command_verifier(void)
+void chrome_init_command_verifier(void)
 {
 	setup_hazard_table(init_table1, table1,
 			   sizeof(init_table1) / sizeof(hz_init_t));

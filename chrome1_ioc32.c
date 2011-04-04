@@ -28,40 +28,40 @@
 #include "drmP.h"
 #include "chrome_drv.h"
 
-static int via_agp_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
+static int chrome_agp_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
-	drm_via_agp_t *agp = data;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
+	drm_chrome_agp_t *agp = data;
 
 	dev_priv->agp_offset = agp->offset;
 	DRM_INFO("AGP offset = %x, size = %u MB\n", agp->offset, agp->size >> 20);
 	return 0;
 }
 
-static int via_fb_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
+static int chrome_fb_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
-	drm_via_fb_t *fb = data;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
+	drm_chrome_fb_t *fb = data;
 
 	dev_priv->vram_offset = fb->offset;
 	DRM_INFO("FB offset = 0x%08x, size = %u MB\n", fb->offset, fb->size >> 20);
 	return 0;
 }
 
-static int via_do_init_map(struct drm_device *dev, drm_via_init_t *init)
+static int chrome_do_init_map(struct drm_device *dev, drm_chrome_init_t *init)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 
 	dev_priv->sarea = drm_getsarea(dev);
 	if (!dev_priv->sarea) {
 		DRM_ERROR("could not find sarea!\n");
 		dev->dev_private = (void *)dev_priv;
-		via_dma_cleanup(dev);
+		chrome_dma_cleanup(dev);
 		return -EINVAL;
 	}
 
 	dev_priv->sarea_priv =
-		(drm_via_sarea_t *) ((u8 *) dev_priv->sarea->handle +
+		(drm_chrome_sarea_t *) ((u8 *) dev_priv->sarea->handle +
 					init->sarea_priv_offset);
 
 	/**
@@ -83,43 +83,43 @@ static int via_do_init_map(struct drm_device *dev, drm_via_init_t *init)
 		if (!dev_priv->mmio.virtual) {
 			DRM_ERROR("could not find mmio region!\n");
 			dev->dev_private = (void *)dev_priv;
-			via_dma_cleanup(dev);
+			chrome_dma_cleanup(dev);
 			return -EINVAL;
 		}
 	}
 
-	via_init_futex(dev_priv);
+	chrome_init_futex(dev_priv);
 
-	via_init_dmablit(dev);
+	chrome_init_dmablit(dev);
 
 	dev->dev_private = (void *)dev_priv;
 	return 0;
 }
 
-static int via_map_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
+static int chrome_map_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	drm_via_init_t *init = data;
+	drm_chrome_init_t *init = data;
 	int ret = 0;
 
 	switch (init->func) {
 	case VIA_INIT_MAP:
-		ret = via_do_init_map(dev, init);
+		ret = chrome_do_init_map(dev, init);
 		break;
 	case VIA_CLEANUP_MAP:
-		ret = via_dma_cleanup(dev);
+		ret = chrome_dma_cleanup(dev);
 		break;
 	}
 	return ret;
 }
 
-static int via_mem_alloc(struct drm_device *dev, void *data,
+static int chrome_mem_alloc(struct drm_device *dev, void *data,
 			struct drm_file *file_priv)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	int type = TTM_PL_FLAG_VRAM, start = dev_priv->vram_offset, ret = -EINVAL;
 	struct ttm_buffer_object *bo = NULL;
 	struct drm_gem_object *gem;
-	drm_via_mem_t *mem = data;
+	drm_chrome_mem_t *mem = data;
 	u32 handle = 0;
 
 	if (mem->type > VIA_MEM_AGP) {
@@ -132,7 +132,7 @@ static int via_mem_alloc(struct drm_device *dev, void *data,
 		type = TTM_PL_FLAG_TT;
 	}
 
-	gem = via_gem_create(dev, &dev_priv->bdev, type, PAGE_SIZE, start,
+	gem = chrome_gem_create(dev, &dev_priv->bdev, type, PAGE_SIZE, start,
 				mem->size);
 	if (!gem)
 		return ret;
@@ -160,10 +160,10 @@ static int via_mem_alloc(struct drm_device *dev, void *data,
 	return ret;
 }
 
-static int via_mem_free(struct drm_device *dev, void *data, struct drm_file *file_priv)
+static int chrome_mem_free(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
 	struct drm_gem_object *obj;
-	drm_via_mem_t *mem = data;
+	drm_chrome_mem_t *mem = data;
 	int ret = 0;
 
 	/*
@@ -189,10 +189,10 @@ static int via_mem_free(struct drm_device *dev, void *data, struct drm_file *fil
 }
 
 static int
-via_gem_alloc(struct drm_device *dev, void *data,
+chrome_gem_alloc(struct drm_device *dev, void *data,
 		struct drm_file *file_priv)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	struct ttm_buffer_object *bo = NULL;
 	struct drm_gem_create *args = data;
 	__u32 domain = args->read_domains;
@@ -202,7 +202,7 @@ via_gem_alloc(struct drm_device *dev, void *data,
 	if (!domain)
 		domain = args->write_domains;
 
-	gem = via_gem_create(dev, &dev_priv->bdev, domain, PAGE_SIZE,
+	gem = chrome_gem_create(dev, &dev_priv->bdev, domain, PAGE_SIZE,
 				0, args->size);
 	if (!gem)
 		return ret;
@@ -219,22 +219,22 @@ via_gem_alloc(struct drm_device *dev, void *data,
 	return ret;
 }
 
-struct drm_ioctl_desc via_ioctls[] = {
-	DRM_IOCTL_DEF_DRV(VIA_ALLOCMEM, via_mem_alloc, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_FREEMEM, via_mem_free, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_AGP_INIT, via_agp_init, DRM_AUTH|DRM_MASTER),
-	DRM_IOCTL_DEF_DRV(VIA_FB_INIT, via_fb_init, DRM_AUTH|DRM_MASTER),
-	DRM_IOCTL_DEF_DRV(VIA_MAP_INIT, via_map_init, DRM_AUTH|DRM_MASTER),
-	DRM_IOCTL_DEF_DRV(VIA_DEC_FUTEX, via_decoder_futex, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_DMA_INIT, via_dma_init, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_CMDBUFFER, via_cmdbuffer, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_FLUSH, via_flush_ioctl, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_PCICMD, via_pci_cmdbuffer, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_CMDBUF_SIZE, via_cmdbuf_size, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_WAIT_IRQ, via_wait_irq, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_DMA_BLIT, via_dma_blit, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_BLIT_SYNC, via_dma_blit_sync, DRM_AUTH),
-	DRM_IOCTL_DEF_DRV(VIA_GEM_CREATE, via_gem_alloc, DRM_AUTH)
+struct drm_ioctl_desc chrome_ioctls[] = {
+	DRM_IOCTL_DEF_DRV(VIA_ALLOCMEM, chrome_mem_alloc, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_FREEMEM, chrome_mem_free, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_AGP_INIT, chrome_agp_init, DRM_AUTH|DRM_MASTER),
+	DRM_IOCTL_DEF_DRV(VIA_FB_INIT, chrome_fb_init, DRM_AUTH|DRM_MASTER),
+	DRM_IOCTL_DEF_DRV(VIA_MAP_INIT, chrome_map_init, DRM_AUTH|DRM_MASTER),
+	DRM_IOCTL_DEF_DRV(VIA_DEC_FUTEX, chrome_decoder_futex, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_DMA_INIT, chrome_dma_init, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_CMDBUFFER, chrome_cmdbuffer, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_FLUSH, chrome_flush_ioctl, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_PCICMD, chrome_pci_cmdbuffer, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_CMDBUF_SIZE, chrome_cmdbuf_size, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_WAIT_IRQ, chrome_wait_irq, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_DMA_BLIT, chrome_dma_blit, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_BLIT_SYNC, chrome_dma_blit_sync, DRM_AUTH),
+	DRM_IOCTL_DEF_DRV(VIA_GEM_CREATE, chrome_gem_alloc, DRM_AUTH)
 };
 
-int via_max_ioctl = DRM_ARRAY_SIZE(via_ioctls);
+int chrome_max_ioctl = DRM_ARRAY_SIZE(chrome_ioctls);

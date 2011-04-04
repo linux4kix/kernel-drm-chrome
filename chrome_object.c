@@ -116,7 +116,7 @@ chrome_buffer_object_destroy(struct ttm_buffer_object *bo)
 /**
  * the buffer object domain
  */
-void via_ttm_placement_from_domain(struct chrome_object *vbo, u32 domain)
+void chrome_ttm_placement_from_domain(struct chrome_object *vbo, u32 domain)
 {
 	u32 np = 0, nb = 0;
 	int i;
@@ -175,7 +175,7 @@ chrome_buffer_object_create(struct ttm_bo_device *bdev,
 		return -ENOMEM;
 	}
 
-	via_ttm_placement_from_domain(vobj, flags);
+	chrome_ttm_placement_from_domain(vobj, flags);
 
 	ret = ttm_bo_init(bdev, &vobj->bo, size, type, &vobj->placement,
 				     page_alignment, buffer_start,
@@ -448,7 +448,7 @@ int chrome_bo_pin(struct chrome_object *bo, u32 domain, u64 *gpu_addr)
 	if (unlikely(r!=0))
 		return r;
 
-	via_ttm_placement_from_domain(bo, domain);
+	chrome_ttm_placement_from_domain(bo, domain);
 	for (i = 0; i < bo->placement.num_placement; i++)
 		bo->placements[i] |= TTM_PL_FLAG_NO_EVICT;
 	r = ttm_bo_validate(&bo->bo, &bo->placement, false, false, false);
@@ -496,7 +496,7 @@ int chrome_object_set_domain(struct chrome_object *bo,
 	if (unlikely(r!=0))
 		return r;
 
-	via_ttm_placement_from_domain(bo, domain);
+	chrome_ttm_placement_from_domain(bo, domain);
 
 	r = ttm_bo_validate(&bo->bo, &bo->placement, false, false, false);
 

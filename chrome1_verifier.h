@@ -25,13 +25,13 @@
 
 #ifndef _VIA_VERIFIER_H_
 #define _VIA_VERIFIER_H_
-#include "via_3d_reg.h"
+#include "chrome_3d_reg.h"
 typedef enum {
 	no_sequence = 0,
 	z_address,
 	dest_address,
 	tex_address
-} drm_via_sequence_t;
+} drm_chrome_sequence_t;
 
 typedef struct {
 	unsigned texture;
@@ -44,7 +44,7 @@ typedef struct {
 	uint32_t tex_level_hi[2];
 	uint32_t tex_palette_size[2];
 	uint32_t tex_npot[2];
-	drm_via_sequence_t unfinished;
+	drm_chrome_sequence_t unfinished;
 	int agp_texture;
 	int multitex;
 	struct drm_device *dev;
@@ -52,11 +52,11 @@ typedef struct {
 	uint32_t vertex_count;
 	int agp;
 	const uint32_t *buf_start;
-} drm_via_state_t;
+} drm_chrome_state_t;
 
-extern int via_verify_command_stream(const uint32_t *buf, unsigned int size,
+extern int chrome_verify_command_stream(const uint32_t *buf, unsigned int size,
 				     struct drm_device *dev, int agp);
-extern int via_parse_command_stream(struct drm_device *dev, const uint32_t *buf,
+extern int chrome_parse_command_stream(struct drm_device *dev, const uint32_t *buf,
 				    unsigned int size);
 
 static inline int is_agp_header(unsigned int data)

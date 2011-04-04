@@ -80,7 +80,7 @@ do {                                                                    \
 #define INV_AGPHEADERE2             0xFEE20000
 #define INV_AGPHEADERE3             0xFEE30000
 
-/*send pause address of AGP ring command buffer via_chrome9 this IO port*/
+/*send pause address of AGP ring command buffer chrome_chrome9 this IO port*/
 #define INV_REG_PCIPAUSE            0x294
 #define INV_REG_PCIPAUSE_ENABLE     0x4
 

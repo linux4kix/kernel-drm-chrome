@@ -26,16 +26,16 @@
 #include "drm_mode.h"
 #include "drm_crtc_helper.h"
 
-#include "via_drv.h"
+#include "chrome_drv.h"
 #include "crtc_hw.h"
 
 static int
-via_crtc_cursor_set(struct drm_crtc *crtc, struct drm_file *file_priv,
+chrome_crtc_cursor_set(struct drm_crtc *crtc, struct drm_file *file_priv,
 			uint32_t handle, uint32_t width, uint32_t height)
 {
-	struct drm_via_private *dev_priv = crtc->dev->dev_private;
+	struct drm_chrome_private *dev_priv = crtc->dev->dev_private;
 	int max_height = 64, max_width = 64, ret = 0;
-	struct via_crtc *iga = &dev_priv->iga[0];
+	struct chrome_crtc *iga = &dev_priv->iga[0];
 	struct drm_device *dev = crtc->dev;
 	struct drm_gem_object *obj = NULL;
 	bool primary = true;
@@ -86,13 +86,13 @@ fail:
 }
 
 static int
-via_crtc_cursor_move(struct drm_crtc *crtc, int x, int y)
+chrome_crtc_cursor_move(struct drm_crtc *crtc, int x, int y)
 {
 	return 0;
 }
 
 static void
-via_crtc_gamma_set(struct drm_crtc *crtc, u16 *red, u16 *green,
+chrome_crtc_gamma_set(struct drm_crtc *crtc, u16 *red, u16 *green,
 			u16 *blue, uint32_t start, uint32_t size)
 {
 	//int end = (start + size > 256) ? 256 : start + size, i;
@@ -103,11 +103,11 @@ via_crtc_gamma_set(struct drm_crtc *crtc, u16 *red, u16 *green,
 		crtc->lut_g[i] = green[i] >> 6;
 		crtc->lut_b[i] = blue[i] >> 6;
 	}
-	via_crtc_load_lut(crtc);*/
+	chrome_crtc_load_lut(crtc);*/
 }
 
 static void
-via_crtc_destroy(struct drm_crtc *crtc)
+chrome_crtc_destroy(struct drm_crtc *crtc)
 {
 	drm_crtc_cleanup(crtc);
 
@@ -116,26 +116,26 @@ via_crtc_destroy(struct drm_crtc *crtc)
 	kfree(crtc);
 }
 
-static const struct drm_crtc_funcs via_crtc_funcs = {
-	.cursor_set = via_crtc_cursor_set,
-	.cursor_move = via_crtc_cursor_move,
-	.gamma_set = via_crtc_gamma_set,
+static const struct drm_crtc_funcs chrome_crtc_funcs = {
+	.cursor_set = chrome_crtc_cursor_set,
+	.cursor_move = chrome_crtc_cursor_move,
+	.gamma_set = chrome_crtc_gamma_set,
 	.set_config = drm_crtc_helper_set_config,
-	.destroy = via_crtc_destroy,
+	.destroy = chrome_crtc_destroy,
 };
 
 static void
-via_crtc_dpms(struct drm_crtc *crtc, int mode)
+chrome_crtc_dpms(struct drm_crtc *crtc, int mode)
 {
 	/* 3D5.36 Bits 5:4 control DPMS */
 
 }
 
 static void
-via_crtc_prepare(struct drm_crtc *crtc)
+chrome_crtc_prepare(struct drm_crtc *crtc)
 {
-	struct drm_via_private *dev_priv = crtc->dev->dev_private;
-	struct via_crtc *iga = &dev_priv->iga[0];
+	struct drm_chrome_private *dev_priv = crtc->dev->dev_private;
+	struct chrome_crtc *iga = &dev_priv->iga[0];
 	u8 orig;
 
 	if (crtc != &iga->crtc)
@@ -152,24 +152,24 @@ via_crtc_prepare(struct drm_crtc *crtc)
 }
 
 static void
-via_crtc_commit(struct drm_crtc *crtc)
+chrome_crtc_commit(struct drm_crtc *crtc)
 {
 }
 
 static bool
-via_crtc_mode_fixup(struct drm_crtc *crtc, struct drm_display_mode *mode,
+chrome_crtc_mode_fixup(struct drm_crtc *crtc, struct drm_display_mode *mode,
 			struct drm_display_mode *adjusted_mode)
 {
 	return true;
 }
 
 static int
-via_crtc_mode_set(struct drm_crtc *crtc, struct drm_display_mode *mode,
+chrome_crtc_mode_set(struct drm_crtc *crtc, struct drm_display_mode *mode,
 		struct drm_display_mode *adjusted_mode,
 		int x, int y, struct drm_framebuffer *old_fb)
 {
-	struct drm_via_private *dev_priv = crtc->dev->dev_private;
-	struct via_crtc *iga = &dev_priv->iga[0];
+	struct drm_chrome_private *dev_priv = crtc->dev->dev_private;
+	struct chrome_crtc *iga = &dev_priv->iga[0];
 
 	if (crtc != &iga->crtc)
 		iga = &dev_priv->iga[1];
@@ -179,47 +179,47 @@ via_crtc_mode_set(struct drm_crtc *crtc, struct drm_display_mode *mode,
 }
 
 static int
-via_crtc_mode_set_base(struct drm_crtc *crtc, int x, int y,
+chrome_crtc_mode_set_base(struct drm_crtc *crtc, int x, int y,
 			struct drm_framebuffer *old_fb)
 {
 	return 0;
 }
 
 static int
-via_crtc_mode_set_base_atomic(struct drm_crtc *crtc, struct drm_framebuffer *fb,
+chrome_crtc_mode_set_base_atomic(struct drm_crtc *crtc, struct drm_framebuffer *fb,
 				int x, int y, enum mode_set_atomic state)
 {
 	return 0;
 }
 
 static void 
-via_crtc_load_lut(struct drm_crtc *crtc)
+chrome_crtc_load_lut(struct drm_crtc *crtc)
 {
 }
 
-static const struct drm_crtc_helper_funcs via_crtc_helper_funcs = {
-	.dpms = via_crtc_dpms,
-	.prepare = via_crtc_prepare,
-	.commit = via_crtc_commit,
-	.mode_fixup = via_crtc_mode_fixup,
-	.mode_set = via_crtc_mode_set,
-	.mode_set_base = via_crtc_mode_set_base,
-	.mode_set_base_atomic = via_crtc_mode_set_base_atomic,
-	.load_lut = via_crtc_load_lut,
+static const struct drm_crtc_helper_funcs chrome_crtc_helper_funcs = {
+	.dpms = chrome_crtc_dpms,
+	.prepare = chrome_crtc_prepare,
+	.commit = chrome_crtc_commit,
+	.mode_fixup = chrome_crtc_mode_fixup,
+	.mode_set = chrome_crtc_mode_set,
+	.mode_set_base = chrome_crtc_mode_set_base,
+	.mode_set_base_atomic = chrome_crtc_mode_set_base_atomic,
+	.load_lut = chrome_crtc_load_lut,
 };
 
 static void 
-via_crtc_init(struct drm_device *dev, int index)
+chrome_crtc_init(struct drm_device *dev, int index)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	struct drm_crtc *crtc = &dev_priv->iga[index].crtc;
 
-	drm_crtc_init(dev, crtc, &via_crtc_funcs);
+	drm_crtc_init(dev, crtc, &chrome_crtc_funcs);
 	drm_mode_crtc_set_gamma_size(crtc, 256);
-	drm_crtc_helper_add(crtc, &via_crtc_helper_funcs);
+	drm_crtc_helper_add(crtc, &chrome_crtc_helper_funcs);
 }
 
-int via_modeset_init(struct drm_device *dev)
+int chrome_modeset_init(struct drm_device *dev)
 {
 	int ret = 0, i;
 
@@ -232,9 +232,9 @@ int via_modeset_init(struct drm_device *dev)
 	dev->mode_config.max_height = 2048;
 
 	for (i = 0; i < 2; i++)
-		via_crtc_init(dev, i);
+		chrome_crtc_init(dev, i);
 
-	via_analog_init(dev);
+	chrome_analog_init(dev);
 
 	return ret;
 }

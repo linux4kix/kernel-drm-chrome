@@ -1,4 +1,4 @@
-/* via_dmablit.h -- PCI DMA BitBlt support for the VIA Unichrome/Pro
+/* chrome_dmablit.h -- PCI DMA BitBlt support for the VIA Unichrome/Pro
  *
  * Copyright 2005 Thomas Hellstrom.
  * All Rights Reserved.
@@ -35,12 +35,12 @@
 #define VIA_NUM_BLIT_ENGINES 2
 #define VIA_NUM_BLIT_SLOTS 8
 
-struct _drm_via_descriptor;
+struct _drm_chrome_descriptor;
 
-typedef struct _drm_via_sg_info {
+typedef struct _drm_chrome_sg_info {
 	struct page **pages;
 	unsigned long num_pages;
-	struct _drm_via_descriptor **desc_pages;
+	struct _drm_chrome_descriptor **desc_pages;
 	int num_desc_pages;
 	int num_desc;
 	enum dma_data_direction direction;
@@ -50,15 +50,15 @@ typedef struct _drm_via_sg_info {
 	unsigned int descriptors_per_page;
 	int aborted;
 	enum {
-		dr_via_device_mapped,
-		dr_via_desc_pages_alloc,
-		dr_via_pages_locked,
-		dr_via_pages_alloc,
-		dr_via_sg_init
+		dr_chrome_device_mapped,
+		dr_chrome_desc_pages_alloc,
+		dr_chrome_pages_locked,
+		dr_chrome_pages_alloc,
+		dr_chrome_sg_init
 	} state;
-} drm_via_sg_info_t;
+} drm_chrome_sg_info_t;
 
-typedef struct _drm_via_blitq {
+typedef struct _drm_chrome_blitq {
 	struct drm_device *dev;
 	uint32_t cur_blit_handle;
 	uint32_t done_blit_handle;
@@ -70,13 +70,13 @@ typedef struct _drm_via_blitq {
 	unsigned long end;
 	int aborting;
 	int is_active;
-	drm_via_sg_info_t *blits[VIA_NUM_BLIT_SLOTS];
+	drm_chrome_sg_info_t *blits[VIA_NUM_BLIT_SLOTS];
 	spinlock_t blit_lock;
 	wait_queue_head_t blit_queue[VIA_NUM_BLIT_SLOTS];
 	wait_queue_head_t busy_queue;
 	struct work_struct wq;
 	struct timer_list poll_timer;
-} drm_via_blitq_t;
+} drm_chrome_blitq_t;
 
 
 /*

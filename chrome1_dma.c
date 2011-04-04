@@ -1,4 +1,4 @@
-/* via_dma.c -- DMA support for the VIA Unichrome/Pro
+/* chrome_dma.c -- DMA support for the VIA Unichrome/Pro
  *
  * Copyright 2003 Tungsten Graphics, Inc., Cedar Park, Texas.
  * All Rights Reserved.
@@ -36,8 +36,8 @@
 
 #include "drmP.h"
 #include "drm.h"
-#include "via_drv.h"
-#include "via_3d_reg.h"
+#include "chrome_drv.h"
+#include "chrome_3d_reg.h"
 
 #define CMDBUF_ALIGNMENT_SIZE   (0x100)
 #define CMDBUF_ALIGNMENT_MASK   (0x0ff)
@@ -49,7 +49,7 @@
 	dev_priv->dma_low += 8;					\
 }
 
-#define via_flush_write_combine() DRM_MEMORYBARRIER()
+#define chrome_flush_write_combine() DRM_MEMORYBARRIER()
 
 #define VIA_OUT_RING_QW(w1, w2)	do {		\
 	*vb++ = (w1);				\
@@ -57,18 +57,18 @@
 	dev_priv->dma_low += 8;			\
 } while (0)
 
-static void via_cmdbuf_start(struct drm_via_private *dev_priv);
-static void via_cmdbuf_pause(struct drm_via_private *dev_priv);
-static void via_cmdbuf_reset(struct drm_via_private *dev_priv);
-static void via_cmdbuf_rewind(struct drm_via_private *dev_priv);
-static int via_wait_idle(struct drm_via_private *dev_priv);
-static void via_pad_cache(struct drm_via_private *dev_priv, int qwords);
+static void chrome_cmdbuf_start(struct drm_chrome_private *dev_priv);
+static void chrome_cmdbuf_pause(struct drm_chrome_private *dev_priv);
+static void chrome_cmdbuf_reset(struct drm_chrome_private *dev_priv);
+static void chrome_cmdbuf_rewind(struct drm_chrome_private *dev_priv);
+static int chrome_wait_idle(struct drm_chrome_private *dev_priv);
+static void chrome_pad_cache(struct drm_chrome_private *dev_priv, int qwords);
 
 /*
  * Free space in command buffer.
  */
 
-static uint32_t via_cmdbuf_space(struct drm_via_private *dev_priv)
+static uint32_t chrome_cmdbuf_space(struct drm_chrome_private *dev_priv)
 {
 	uint32_t agp_base = dev_priv->dma_offset;
 	uint32_t hw_addr = ioread32(dev_priv->hw_addr_ptr) - agp_base;
@@ -82,7 +82,7 @@ static uint32_t via_cmdbuf_space(struct drm_via_private *dev_priv)
  * How much does the command regulator lag behind?
  */
 
-static uint32_t via_cmdbuf_lag(struct drm_via_private *dev_priv)
+static uint32_t chrome_cmdbuf_lag(struct drm_chrome_private *dev_priv)
 {
 	uint32_t agp_base = dev_priv->dma_offset;
 	uint32_t hw_addr = ioread32(dev_priv->hw_addr_ptr) - agp_base;
@@ -97,7 +97,7 @@ static uint32_t via_cmdbuf_lag(struct drm_via_private *dev_priv)
  */
 
 static inline int
-via_cmdbuf_wait(struct drm_via_private *dev_priv, unsigned int size)
+chrome_cmdbuf_wait(struct drm_chrome_private *dev_priv, unsigned int size)
 {
 	uint32_t agp_base = dev_priv->dma_offset;
 	uint32_t cur_addr, hw_addr, next_addr;
@@ -111,7 +111,7 @@ via_cmdbuf_wait(struct drm_via_private *dev_priv, unsigned int size)
 		hw_addr = *hw_addr_ptr - agp_base;
 		if (count-- == 0) {
 			DRM_ERROR
-			    ("via_cmdbuf_wait timed out hw %x cur_addr %x next_addr %x\n",
+			    ("chrome_cmdbuf_wait timed out hw %x cur_addr %x next_addr %x\n",
 			     hw_addr, cur_addr, next_addr);
 			return -1;
 		}
@@ -128,28 +128,28 @@ via_cmdbuf_wait(struct drm_via_private *dev_priv, unsigned int size)
  * Returns virtual pointer to ring buffer.
  */
 
-static inline uint32_t *via_check_dma(struct drm_via_private * dev_priv,
+static inline uint32_t *chrome_check_dma(struct drm_chrome_private * dev_priv,
 				      unsigned int size)
 {
 	if ((dev_priv->dma_low + size + 4 * CMDBUF_ALIGNMENT_SIZE) >
 	    dev_priv->dma_high) {
-		via_cmdbuf_rewind(dev_priv);
+		chrome_cmdbuf_rewind(dev_priv);
 	}
-	if (via_cmdbuf_wait(dev_priv, size) != 0)
+	if (chrome_cmdbuf_wait(dev_priv, size) != 0)
 		return NULL;
 
 	return (uint32_t *) (dev_priv->dmabuf.virtual + dev_priv->dma_low);
 }
 
-int via_dma_cleanup(struct drm_device *dev)
+int chrome_dma_cleanup(struct drm_device *dev)
 {
 	if (dev->dev_private) {
-		struct drm_via_private *dev_priv = dev->dev_private;
+		struct drm_chrome_private *dev_priv = dev->dev_private;
 
 		if (dev_priv->dmabuf.virtual) {
 			struct ttm_buffer_object *bo = dev_priv->dmabuf.bo;
 
-			via_cmdbuf_reset(dev_priv);
+			chrome_cmdbuf_reset(dev_priv);
 
 			ttm_bo_kunmap(&dev_priv->dmabuf);
 			ttm_bo_unref(&bo);
@@ -159,15 +159,15 @@ int via_dma_cleanup(struct drm_device *dev)
 	return 0;
 }
 
-static int via_initialize(struct drm_device *dev,
-			  struct drm_via_private *dev_priv,
-			  drm_via_dma_init_t *init)
+static int chrome_initialize(struct drm_device *dev,
+			  struct drm_chrome_private *dev_priv,
+			  drm_chrome_dma_init_t *init)
 {
 	struct ttm_buffer_object *bo;
 	int ret = -EFAULT;
 
 	if (!dev_priv) {
-		DRM_ERROR("via_dma_init called before via_map_init\n");
+		DRM_ERROR("chrome_dma_init called before chrome_map_init\n");
 		return ret;
 	}
 
@@ -188,7 +188,7 @@ static int via_initialize(struct drm_device *dev,
 
 	ret = ttm_bo_allocate(&dev_priv->bdev, init->size, ttm_bo_type_kernel,
 				TTM_PL_FLAG_TT, VIA_MM_ALIGN_SIZE, PAGE_SIZE,
-				init->offset, false, via_ttm_bo_destroy,
+				init->offset, false, chrome_ttm_bo_destroy,
 				NULL, &bo);
 	if (!ret) {
 		ret = ttm_bo_reserve(bo, true, false, false, 0);
@@ -208,17 +208,17 @@ static int via_initialize(struct drm_device *dev,
 	dev_priv->hw_addr_ptr =
 		(void *)(dev_priv->mmio.virtual + init->reg_pause_addr);
 
-	via_cmdbuf_start(dev_priv);
+	chrome_cmdbuf_start(dev_priv);
 out_err:
 	if (ret)
 		DRM_ERROR("can not ioremap TTM DMA ring buffer\n");
 	return ret;
 }
 
-int via_dma_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
+int chrome_dma_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
-	drm_via_dma_init_t *init = data;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
+	drm_chrome_dma_init_t *init = data;
 	int retcode = 0;
 
 	switch (init->func) {
@@ -226,13 +226,13 @@ int via_dma_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
 		if (!DRM_SUSER(DRM_CURPROC))
 			retcode = -EPERM;
 		else
-			retcode = via_initialize(dev, dev_priv, init);
+			retcode = chrome_initialize(dev, dev_priv, init);
 		break;
 	case VIA_CLEANUP_DMA:
 		if (!DRM_SUSER(DRM_CURPROC))
 			retcode = -EPERM;
 		else
-			retcode = via_dma_cleanup(dev);
+			retcode = chrome_dma_cleanup(dev);
 		break;
 	case VIA_DMA_INITIALIZED:
 		retcode = (dev_priv->dmabuf.virtual != NULL) ?
@@ -246,9 +246,9 @@ int via_dma_init(struct drm_device *dev, void *data, struct drm_file *file_priv)
 	return retcode;
 }
 
-int via_dispatch_cmdbuffer(struct drm_device *dev, drm_via_cmdbuffer_t *cmd)
+int chrome_dispatch_cmdbuffer(struct drm_device *dev, drm_chrome_cmdbuffer_t *cmd)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	uint32_t *vb;
 	int ret;
 
@@ -270,12 +270,12 @@ int via_dispatch_cmdbuffer(struct drm_device *dev, drm_via_cmdbuffer_t *cmd)
 	 */
 
 	if ((ret =
-	     via_verify_command_stream((uint32_t *) dev_priv->pci_buf,
+	     chrome_verify_command_stream((uint32_t *) dev_priv->pci_buf,
 				       cmd->size, dev, 1))) {
 		return ret;
 	}
 
-	vb = via_check_dma(dev_priv, (cmd->size < 0x100) ? 0x102 : cmd->size);
+	vb = chrome_check_dma(dev_priv, (cmd->size < 0x100) ? 0x102 : cmd->size);
 	if (vb == NULL)
 		return -EAGAIN;
 
@@ -289,46 +289,46 @@ int via_dispatch_cmdbuffer(struct drm_device *dev, drm_via_cmdbuffer_t *cmd)
 	 */
 
 	if (cmd->size < 0x100)
-		via_pad_cache(dev_priv, (0x100 - cmd->size) >> 3);
-	via_cmdbuf_pause(dev_priv);
+		chrome_pad_cache(dev_priv, (0x100 - cmd->size) >> 3);
+	chrome_cmdbuf_pause(dev_priv);
 
 	return 0;
 }
 
-int via_driver_dma_quiescent(struct drm_device *dev)
+int chrome_driver_dma_quiescent(struct drm_device *dev)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 
-	if (!via_wait_idle(dev_priv))
+	if (!chrome_wait_idle(dev_priv))
 		return -EBUSY;
 	return 0;
 }
 
-int via_flush_ioctl(struct drm_device *dev, void *data, struct drm_file *file_priv)
+int chrome_flush_ioctl(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
 
 	LOCK_TEST_WITH_RETURN(dev, file_priv);
 
-	return via_driver_dma_quiescent(dev);
+	return chrome_driver_dma_quiescent(dev);
 }
 
-int via_cmdbuffer(struct drm_device *dev, void *data, struct drm_file *file_priv)
+int chrome_cmdbuffer(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	drm_via_cmdbuffer_t *cmdbuf = data;
+	drm_chrome_cmdbuffer_t *cmdbuf = data;
 	int ret;
 
 	LOCK_TEST_WITH_RETURN(dev, file_priv);
 
 	DRM_DEBUG("buf %p size %lu\n", cmdbuf->buf, cmdbuf->size);
 
-	ret = via_dispatch_cmdbuffer(dev, cmdbuf);
+	ret = chrome_dispatch_cmdbuffer(dev, cmdbuf);
 	return ret;
 }
 
-static int via_dispatch_pci_cmdbuffer(struct drm_device *dev,
-				      drm_via_cmdbuffer_t *cmd)
+static int chrome_dispatch_pci_cmdbuffer(struct drm_device *dev,
+				      drm_chrome_cmdbuffer_t *cmd)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 	int ret;
 
 	if (cmd->size > VIA_PCI_BUF_SIZE)
@@ -337,31 +337,31 @@ static int via_dispatch_pci_cmdbuffer(struct drm_device *dev,
 		return -EFAULT;
 
 	if ((ret =
-	     via_verify_command_stream((uint32_t *) dev_priv->pci_buf,
+	     chrome_verify_command_stream((uint32_t *) dev_priv->pci_buf,
 				       cmd->size, dev, 0))) {
 		return ret;
 	}
 
 	ret =
-	    via_parse_command_stream(dev, (const uint32_t *)dev_priv->pci_buf,
+	    chrome_parse_command_stream(dev, (const uint32_t *)dev_priv->pci_buf,
 				     cmd->size);
 	return ret;
 }
 
-int via_pci_cmdbuffer(struct drm_device *dev, void *data, struct drm_file *file_priv)
+int chrome_pci_cmdbuffer(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	drm_via_cmdbuffer_t *cmdbuf = data;
+	drm_chrome_cmdbuffer_t *cmdbuf = data;
 	int ret;
 
 	LOCK_TEST_WITH_RETURN(dev, file_priv);
 
 	DRM_DEBUG("buf %p size %lu\n", cmdbuf->buf, cmdbuf->size);
 
-	ret = via_dispatch_pci_cmdbuffer(dev, cmdbuf);
+	ret = chrome_dispatch_pci_cmdbuffer(dev, cmdbuf);
 	return ret;
 }
 
-static inline uint32_t *via_align_buffer(struct drm_via_private *dev_priv,
+static inline uint32_t *chrome_align_buffer(struct drm_chrome_private *dev_priv,
 					 uint32_t * vb, int qw_count)
 {
 	for (; qw_count > 0; --qw_count)
@@ -374,7 +374,7 @@ static inline uint32_t *via_align_buffer(struct drm_via_private *dev_priv,
  *
  * Returns virtual pointer to ring buffer.
  */
-static inline uint32_t *via_get_dma(struct drm_via_private *dev_priv)
+static inline uint32_t *chrome_get_dma(struct drm_chrome_private *dev_priv)
 {
 	return (uint32_t *) (dev_priv->dmabuf.virtual + dev_priv->dma_low);
 }
@@ -384,7 +384,7 @@ static inline uint32_t *via_get_dma(struct drm_via_private *dev_priv)
  * modifying the pause address stored in the buffer itself. If
  * the regulator has already paused, restart it.
  */
-static int via_hook_segment(struct drm_via_private *dev_priv,
+static int chrome_hook_segment(struct drm_chrome_private *dev_priv,
 			    uint32_t pause_addr_hi, uint32_t pause_addr_lo,
 			    int no_pci_fire)
 {
@@ -394,18 +394,18 @@ static int via_hook_segment(struct drm_via_private *dev_priv,
 	uint32_t diff;
 
 	paused = 0;
-	via_flush_write_combine();
-	(void) *(volatile uint32_t *)(via_get_dma(dev_priv) - 1);
+	chrome_flush_write_combine();
+	(void) *(volatile uint32_t *)(chrome_get_dma(dev_priv) - 1);
 
 	*paused_at = pause_addr_lo;
-	via_flush_write_combine();
+	chrome_flush_write_combine();
 	(void) *paused_at;
 
 	reader = ioread32(dev_priv->hw_addr_ptr);
 	ptr = ((volatile void *)paused_at - dev_priv->dmabuf.virtual) +
 		dev_priv->dma_offset + 4;
 
-	dev_priv->last_pause_ptr = via_get_dma(dev_priv) - 1;
+	dev_priv->last_pause_ptr = chrome_get_dma(dev_priv) - 1;
 
 	/*
 	 * If there is a possibility that the command reader will
@@ -450,7 +450,7 @@ static int via_hook_segment(struct drm_via_private *dev_priv,
 	return paused;
 }
 
-static int via_wait_idle(struct drm_via_private *dev_priv)
+static int chrome_wait_idle(struct drm_chrome_private *dev_priv)
 {
 	int count = 10000000;
 
@@ -464,7 +464,7 @@ static int via_wait_idle(struct drm_via_private *dev_priv)
 	return count;
 }
 
-static uint32_t *via_align_cmd(struct drm_via_private *dev_priv, uint32_t cmd_type,
+static uint32_t *chrome_align_cmd(struct drm_chrome_private *dev_priv, uint32_t cmd_type,
 			       uint32_t addr, uint32_t *cmd_addr_hi,
 			       uint32_t *cmd_addr_lo, int skip_wait)
 {
@@ -474,9 +474,9 @@ static uint32_t *via_align_cmd(struct drm_via_private *dev_priv, uint32_t cmd_ty
 	uint32_t qw_pad_count;
 
 	if (!skip_wait)
-		via_cmdbuf_wait(dev_priv, 2 * CMDBUF_ALIGNMENT_SIZE);
+		chrome_cmdbuf_wait(dev_priv, 2 * CMDBUF_ALIGNMENT_SIZE);
 
-	vb = via_get_dma(dev_priv);
+	vb = chrome_get_dma(dev_priv);
 	VIA_OUT_RING_QW(HC_HEADER2 | ((VIA_REG_TRANSET >> 2) << 12) |
 			(VIA_REG_TRANSPACE >> 2), HC_ParaType_PreCR << 16);
 
@@ -490,12 +490,12 @@ static uint32_t *via_align_cmd(struct drm_via_private *dev_priv, uint32_t cmd_ty
 		   (cmd_addr & HC_HAGPBpL_MASK));
 	addr_hi = ((HC_SubA_HAGPBpH << 24) | (cmd_addr >> 24));
 
-	vb = via_align_buffer(dev_priv, vb, qw_pad_count - 1);
+	vb = chrome_align_buffer(dev_priv, vb, qw_pad_count - 1);
 	VIA_OUT_RING_QW(*cmd_addr_hi = addr_hi, *cmd_addr_lo = addr_lo);
 	return vb;
 }
 
-static void via_cmdbuf_start(struct drm_via_private *dev_priv)
+static void chrome_cmdbuf_start(struct drm_chrome_private *dev_priv)
 {
 	uint32_t pause_addr_lo, pause_addr_hi;
 	uint32_t start_addr, start_addr_lo;
@@ -518,10 +518,10 @@ static void via_cmdbuf_start(struct drm_via_private *dev_priv)
 		   ((end_addr & 0xff000000) >> 16));
 
 	dev_priv->last_pause_ptr =
-	    via_align_cmd(dev_priv, HC_HAGPBpID_PAUSE, 0,
+	    chrome_align_cmd(dev_priv, HC_HAGPBpID_PAUSE, 0,
 			  &pause_addr_hi, &pause_addr_lo, 1) - 1;
 
-	via_flush_write_combine();
+	chrome_flush_write_combine();
 	(void) *(volatile uint32_t *) dev_priv->last_pause_ptr;
 
 	VIA_WRITE(VIA_REG_TRANSET, (HC_ParaType_PreCR << 16));
@@ -554,25 +554,25 @@ static void via_cmdbuf_start(struct drm_via_private *dev_priv)
 	dev_priv->dma_diff = ptr - reader;
 }
 
-static void via_pad_cache(struct drm_via_private *dev_priv, int qwords)
+static void chrome_pad_cache(struct drm_chrome_private *dev_priv, int qwords)
 {
 	uint32_t *vb;
 
-	via_cmdbuf_wait(dev_priv, qwords + 2);
-	vb = via_get_dma(dev_priv);
+	chrome_cmdbuf_wait(dev_priv, qwords + 2);
+	vb = chrome_get_dma(dev_priv);
 	VIA_OUT_RING_QW(HC_HEADER2, HC_ParaType_NotTex << 16);
-	via_align_buffer(dev_priv, vb, qwords);
+	chrome_align_buffer(dev_priv, vb, qwords);
 }
 
-static inline void via_dummy_bitblt(struct drm_via_private *dev_priv)
+static inline void chrome_dummy_bitblt(struct drm_chrome_private *dev_priv)
 {
-	uint32_t *vb = via_get_dma(dev_priv);
+	uint32_t *vb = chrome_get_dma(dev_priv);
 	VIA_OUT_RING_H1(0x0C, (0 | (0 << 16)));
 	VIA_OUT_RING_H1(0x10, 0 | (0 << 16));
 	VIA_OUT_RING_H1(0x0, 0x1 | 0x2000 | 0xAA000000);
 }
 
-static void via_cmdbuf_rewind(struct drm_via_private *dev_priv)
+static void chrome_cmdbuf_rewind(struct drm_chrome_private *dev_priv)
 {
 	uint32_t agp_base;
 	uint32_t pause_addr_lo, pause_addr_hi;
@@ -581,7 +581,7 @@ static void via_cmdbuf_rewind(struct drm_via_private *dev_priv)
 	uint32_t dma_low_save1, dma_low_save2;
 
 	agp_base = dev_priv->dma_offset;
-	via_align_cmd(dev_priv, HC_HAGPBpID_JUMP, 0, &jump_addr_hi,
+	chrome_align_cmd(dev_priv, HC_HAGPBpID_JUMP, 0, &jump_addr_hi,
 		      &jump_addr_lo, 0);
 
 	dev_priv->dma_wrap = dev_priv->dma_low;
@@ -591,16 +591,16 @@ static void via_cmdbuf_rewind(struct drm_via_private *dev_priv)
 	 */
 
 	dev_priv->dma_low = 0;
-	if (via_cmdbuf_wait(dev_priv, CMDBUF_ALIGNMENT_SIZE) != 0)
-		DRM_ERROR("via_cmdbuf_rewind failed\n");
+	if (chrome_cmdbuf_wait(dev_priv, CMDBUF_ALIGNMENT_SIZE) != 0)
+		DRM_ERROR("chrome_cmdbuf_rewind failed\n");
 
-	via_dummy_bitblt(dev_priv);
-	via_dummy_bitblt(dev_priv);
+	chrome_dummy_bitblt(dev_priv);
+	chrome_dummy_bitblt(dev_priv);
 
 	last_pause_ptr =
-	    via_align_cmd(dev_priv, HC_HAGPBpID_PAUSE, 0, &pause_addr_hi,
+	    chrome_align_cmd(dev_priv, HC_HAGPBpID_PAUSE, 0, &pause_addr_hi,
 			  &pause_addr_lo, 0) - 1;
-	via_align_cmd(dev_priv, HC_HAGPBpID_PAUSE, 0, &pause_addr_hi,
+	chrome_align_cmd(dev_priv, HC_HAGPBpID_PAUSE, 0, &pause_addr_hi,
 		      &pause_addr_lo, 0);
 
 	*last_pause_ptr = pause_addr_lo;
@@ -608,7 +608,7 @@ static void via_cmdbuf_rewind(struct drm_via_private *dev_priv)
 
 	/*
 	 * Now, set a trap that will pause the regulator if it tries to rerun the old
-	 * command buffer. (Which may happen if via_hook_segment detecs a command regulator pause
+	 * command buffer. (Which may happen if chrome_hook_segment detecs a command regulator pause
 	 * and reissues the jump command over PCI, while the regulator has already taken the jump
 	 * and actually paused at the current buffer end).
 	 * There appears to be no other way to detect this condition, since the hw_addr_pointer
@@ -616,46 +616,46 @@ static void via_cmdbuf_rewind(struct drm_via_private *dev_priv)
 	 */
 
 	last_pause_ptr =
-		via_align_cmd(dev_priv, HC_HAGPBpID_PAUSE, 0, &pause_addr_hi,
+		chrome_align_cmd(dev_priv, HC_HAGPBpID_PAUSE, 0, &pause_addr_hi,
 			      &pause_addr_lo, 0) - 1;
-	via_align_cmd(dev_priv, HC_HAGPBpID_PAUSE, 0, &pause_addr_hi,
+	chrome_align_cmd(dev_priv, HC_HAGPBpID_PAUSE, 0, &pause_addr_hi,
 		      &pause_addr_lo, 0);
 	*last_pause_ptr = pause_addr_lo;
 
 	dma_low_save2 = dev_priv->dma_low;
 	dev_priv->dma_low = dma_low_save1;
-	via_hook_segment(dev_priv, jump_addr_hi, jump_addr_lo, 0);
+	chrome_hook_segment(dev_priv, jump_addr_hi, jump_addr_lo, 0);
 	dev_priv->dma_low = dma_low_save2;
-	via_hook_segment(dev_priv, pause_addr_hi, pause_addr_lo, 0);
+	chrome_hook_segment(dev_priv, pause_addr_hi, pause_addr_lo, 0);
 }
 
-static void via_cmdbuf_flush(struct drm_via_private *dev_priv, uint32_t cmd_type)
+static void chrome_cmdbuf_flush(struct drm_chrome_private *dev_priv, uint32_t cmd_type)
 {
 	uint32_t pause_addr_lo, pause_addr_hi;
 
-	via_align_cmd(dev_priv, cmd_type, 0, &pause_addr_hi, &pause_addr_lo, 0);
-	via_hook_segment(dev_priv, pause_addr_hi, pause_addr_lo, 0);
+	chrome_align_cmd(dev_priv, cmd_type, 0, &pause_addr_hi, &pause_addr_lo, 0);
+	chrome_hook_segment(dev_priv, pause_addr_hi, pause_addr_lo, 0);
 }
 
-static void via_cmdbuf_pause(struct drm_via_private *dev_priv)
+static void chrome_cmdbuf_pause(struct drm_chrome_private *dev_priv)
 {
-	via_cmdbuf_flush(dev_priv, HC_HAGPBpID_PAUSE);
+	chrome_cmdbuf_flush(dev_priv, HC_HAGPBpID_PAUSE);
 }
 
-static void via_cmdbuf_reset(struct drm_via_private *dev_priv)
+static void chrome_cmdbuf_reset(struct drm_chrome_private *dev_priv)
 {
-	via_cmdbuf_flush(dev_priv, HC_HAGPBpID_STOP);
-	via_wait_idle(dev_priv);
+	chrome_cmdbuf_flush(dev_priv, HC_HAGPBpID_STOP);
+	chrome_wait_idle(dev_priv);
 }
 
 /*
  * User interface to the space and lag functions.
  */
 
-int via_cmdbuf_size(struct drm_device *dev, void *data, struct drm_file *file_priv)
+int chrome_cmdbuf_size(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
-	drm_via_cmdbuf_size_t *d_siz = data;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
+	drm_chrome_cmdbuf_size_t *d_siz = data;
 	int ret = 0;
 	uint32_t tmp_size, count;
 
@@ -671,7 +671,7 @@ int via_cmdbuf_size(struct drm_device *dev, void *data, struct drm_file *file_pr
 	tmp_size = d_siz->size;
 	switch (d_siz->func) {
 	case VIA_CMDBUF_SPACE:
-		while (((tmp_size = via_cmdbuf_space(dev_priv)) < d_siz->size)
+		while (((tmp_size = chrome_cmdbuf_space(dev_priv)) < d_siz->size)
 		       && --count) {
 			if (!d_siz->wait)
 				break;
@@ -682,7 +682,7 @@ int via_cmdbuf_size(struct drm_device *dev, void *data, struct drm_file *file_pr
 		}
 		break;
 	case VIA_CMDBUF_LAG:
-		while (((tmp_size = via_cmdbuf_lag(dev_priv)) > d_siz->size)
+		while (((tmp_size = chrome_cmdbuf_lag(dev_priv)) > d_siz->size)
 		       && --count) {
 			if (!d_siz->wait)
 				break;

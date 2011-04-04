@@ -1,4 +1,4 @@
-/* via_dmablit.c -- PCI DMA BitBlt support for the VIA Unichrome/Pro
+/* chrome_dmablit.c -- PCI DMA BitBlt support for the VIA Unichrome/Pro
  *
  * Copyright (C) 2005 Thomas Hellstrom, All Rights Reserved.
  *
@@ -35,7 +35,7 @@
  */
 
 #include "drmP.h"
-#include "via_drv.h"
+#include "chrome_drv.h"
 
 #include <linux/pagemap.h>
 #include <linux/slab.h>
@@ -44,12 +44,12 @@
 #define VIA_PGOFF(x)	    (((unsigned long)(x)) & ~PAGE_MASK)
 #define VIA_PFN(x)	      ((unsigned long)(x) >> PAGE_SHIFT)
 
-typedef struct _drm_via_descriptor {
+typedef struct _drm_chrome_descriptor {
 	uint32_t mem_addr;
 	uint32_t dev_addr;
 	uint32_t size;
 	uint32_t next;
-} drm_via_descriptor_t;
+} drm_chrome_descriptor_t;
 
 
 /*
@@ -59,12 +59,12 @@ typedef struct _drm_via_descriptor {
 
 
 static void
-via_unmap_blit_from_device(struct pci_dev *pdev, drm_via_sg_info_t *vsg)
+chrome_unmap_blit_from_device(struct pci_dev *pdev, drm_chrome_sg_info_t *vsg)
 {
 	int num_desc = vsg->num_desc;
 	unsigned cur_descriptor_page = num_desc / vsg->descriptors_per_page;
 	unsigned descriptor_this_page = num_desc % vsg->descriptors_per_page;
-	drm_via_descriptor_t *desc_ptr = vsg->desc_pages[cur_descriptor_page] +
+	drm_chrome_descriptor_t *desc_ptr = vsg->desc_pages[cur_descriptor_page] +
 		descriptor_this_page;
 	dma_addr_t next = vsg->chain_start;
 
@@ -90,9 +90,9 @@ via_unmap_blit_from_device(struct pci_dev *pdev, drm_via_sg_info_t *vsg)
  */
 
 static void
-via_map_blit_for_device(struct pci_dev *pdev,
-		   const drm_via_dmablit_t *xfer,
-		   drm_via_sg_info_t *vsg,
+chrome_map_blit_for_device(struct pci_dev *pdev,
+		   const drm_chrome_dmablit_t *xfer,
+		   drm_chrome_sg_info_t *vsg,
 		   int mode)
 {
 	unsigned cur_descriptor_page = 0;
@@ -107,7 +107,7 @@ via_map_blit_for_device(struct pci_dev *pdev,
 	int num_desc = 0;
 	int cur_line;
 	dma_addr_t next = 0 | VIA_DMA_DPR_EC;
-	drm_via_descriptor_t *desc_ptr = NULL;
+	drm_chrome_descriptor_t *desc_ptr = NULL;
 
 	if (mode == 1)
 		desc_ptr = vsg->desc_pages[cur_descriptor_page];
@@ -154,7 +154,7 @@ via_map_blit_for_device(struct pci_dev *pdev,
 
 	if (mode == 1) {
 		vsg->chain_start = next;
-		vsg->state = dr_via_device_mapped;
+		vsg->state = dr_chrome_device_mapped;
 	}
 	vsg->num_desc = num_desc;
 }
@@ -167,21 +167,21 @@ via_map_blit_for_device(struct pci_dev *pdev,
 
 
 static void
-via_free_sg_info(struct pci_dev *pdev, drm_via_sg_info_t *vsg)
+chrome_free_sg_info(struct pci_dev *pdev, drm_chrome_sg_info_t *vsg)
 {
 	struct page *page;
 	int i;
 
 	switch (vsg->state) {
-	case dr_via_device_mapped:
-		via_unmap_blit_from_device(pdev, vsg);
-	case dr_via_desc_pages_alloc:
+	case dr_chrome_device_mapped:
+		chrome_unmap_blit_from_device(pdev, vsg);
+	case dr_chrome_desc_pages_alloc:
 		for (i = 0; i < vsg->num_desc_pages; ++i) {
 			if (vsg->desc_pages[i] != NULL)
 				free_page((unsigned long)vsg->desc_pages[i]);
 		}
 		kfree(vsg->desc_pages);
-	case dr_via_pages_locked:
+	case dr_chrome_pages_locked:
 		for (i = 0; i < vsg->num_pages; ++i) {
 			if (NULL != (page = vsg->pages[i])) {
 				if (!PageReserved(page) && (DMA_FROM_DEVICE == vsg->direction))
@@ -189,10 +189,10 @@ via_free_sg_info(struct pci_dev *pdev, drm_via_sg_info_t *vsg)
 				page_cache_release(page);
 			}
 		}
-	case dr_via_pages_alloc:
+	case dr_chrome_pages_alloc:
 		vfree(vsg->pages);
 	default:
-		vsg->state = dr_via_sg_init;
+		vsg->state = dr_chrome_sg_init;
 	}
 	vfree(vsg->bounce_buffer);
 	vsg->bounce_buffer = NULL;
@@ -204,9 +204,9 @@ via_free_sg_info(struct pci_dev *pdev, drm_via_sg_info_t *vsg)
  */
 
 static void
-via_fire_dmablit(struct drm_device *dev, drm_via_sg_info_t *vsg, int engine)
+chrome_fire_dmablit(struct drm_device *dev, drm_chrome_sg_info_t *vsg, int engine)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 
 	VIA_WRITE(VIA_PCI_DMA_MAR0 + engine*0x10, 0);
 	VIA_WRITE(VIA_PCI_DMA_DAR0 + engine*0x10, 0);
@@ -226,7 +226,7 @@ via_fire_dmablit(struct drm_device *dev, drm_via_sg_info_t *vsg, int engine)
  */
 
 static int
-via_lock_all_dma_pages(drm_via_sg_info_t *vsg,  drm_via_dmablit_t *xfer)
+chrome_lock_all_dma_pages(drm_chrome_sg_info_t *vsg,  drm_chrome_dmablit_t *xfer)
 {
 	int ret;
 	unsigned long first_pfn = VIA_PFN(xfer->mem_addr);
@@ -247,10 +247,10 @@ via_lock_all_dma_pages(drm_via_sg_info_t *vsg,  drm_via_dmablit_t *xfer)
 	if (ret != vsg->num_pages) {
 		if (ret < 0)
 			return ret;
-		vsg->state = dr_via_pages_locked;
+		vsg->state = dr_chrome_pages_locked;
 		return -EINVAL;
 	}
-	vsg->state = dr_via_pages_locked;
+	vsg->state = dr_chrome_pages_locked;
 	DRM_DEBUG("DMA pages locked\n");
 	return 0;
 }
@@ -262,21 +262,21 @@ via_lock_all_dma_pages(drm_via_sg_info_t *vsg,  drm_via_dmablit_t *xfer)
  */
 
 static int
-via_alloc_desc_pages(drm_via_sg_info_t *vsg)
+chrome_alloc_desc_pages(drm_chrome_sg_info_t *vsg)
 {
 	int i;
 
-	vsg->descriptors_per_page = PAGE_SIZE / sizeof(drm_via_descriptor_t);
+	vsg->descriptors_per_page = PAGE_SIZE / sizeof(drm_chrome_descriptor_t);
 	vsg->num_desc_pages = (vsg->num_desc + vsg->descriptors_per_page - 1) /
 		vsg->descriptors_per_page;
 
 	if (NULL ==  (vsg->desc_pages = kcalloc(vsg->num_desc_pages, sizeof(void *), GFP_KERNEL)))
 		return -ENOMEM;
 
-	vsg->state = dr_via_desc_pages_alloc;
+	vsg->state = dr_chrome_desc_pages_alloc;
 	for (i = 0; i < vsg->num_desc_pages; ++i) {
 		if (NULL == (vsg->desc_pages[i] =
-			     (drm_via_descriptor_t *) __get_free_page(GFP_KERNEL)))
+			     (drm_chrome_descriptor_t *) __get_free_page(GFP_KERNEL)))
 			return -ENOMEM;
 	}
 	DRM_DEBUG("Allocated %d pages for %d descriptors.\n", vsg->num_desc_pages,
@@ -285,17 +285,17 @@ via_alloc_desc_pages(drm_via_sg_info_t *vsg)
 }
 
 static void
-via_abort_dmablit(struct drm_device *dev, int engine)
+chrome_abort_dmablit(struct drm_device *dev, int engine)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 
 	VIA_WRITE(VIA_PCI_DMA_CSR0 + engine*0x04, VIA_DMA_CSR_TA);
 }
 
 static void
-via_dmablit_engine_off(struct drm_device *dev, int engine)
+chrome_dmablit_engine_off(struct drm_device *dev, int engine)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
 
 	VIA_WRITE(VIA_PCI_DMA_CSR0 + engine*0x04, VIA_DMA_CSR_TD | VIA_DMA_CSR_DD);
 }
@@ -308,10 +308,10 @@ via_dmablit_engine_off(struct drm_device *dev, int engine)
  */
 
 void
-via_dmablit_handler(struct drm_device *dev, int engine, int from_irq)
+chrome_dmablit_handler(struct drm_device *dev, int engine, int from_irq)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
-	drm_via_blitq_t *blitq = dev_priv->blit_queues + engine;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
+	drm_chrome_blitq_t *blitq = dev_priv->blit_queues + engine;
 	int cur;
 	int done_transfer;
 	unsigned long irqsave = 0;
@@ -357,14 +357,14 @@ via_dmablit_handler(struct drm_device *dev, int engine, int from_irq)
 		 * Abort transfer after one second.
 		 */
 
-		via_abort_dmablit(dev, engine);
+		chrome_abort_dmablit(dev, engine);
 		blitq->aborting = 1;
 		blitq->end = jiffies + DRM_HZ;
 	}
 
 	if (!blitq->is_active) {
 		if (blitq->num_outstanding) {
-			via_fire_dmablit(dev, blitq->blits[cur], engine);
+			chrome_fire_dmablit(dev, blitq->blits[cur], engine);
 			blitq->is_active = 1;
 			blitq->cur = cur;
 			blitq->num_outstanding--;
@@ -374,7 +374,7 @@ via_dmablit_handler(struct drm_device *dev, int engine, int from_irq)
 		} else {
 			if (timer_pending(&blitq->poll_timer))
 				del_timer(&blitq->poll_timer);
-			via_dmablit_engine_off(dev, engine);
+			chrome_dmablit_engine_off(dev, engine);
 		}
 	}
 
@@ -391,7 +391,7 @@ via_dmablit_handler(struct drm_device *dev, int engine, int from_irq)
  */
 
 static int
-via_dmablit_active(drm_via_blitq_t *blitq, int engine, uint32_t handle, wait_queue_head_t **queue)
+chrome_dmablit_active(drm_chrome_blitq_t *blitq, int engine, uint32_t handle, wait_queue_head_t **queue)
 {
 	unsigned long irqsave;
 	uint32_t slot;
@@ -423,16 +423,16 @@ via_dmablit_active(drm_via_blitq_t *blitq, int engine, uint32_t handle, wait_que
  */
 
 static int
-via_dmablit_sync(struct drm_device *dev, uint32_t handle, int engine)
+chrome_dmablit_sync(struct drm_device *dev, uint32_t handle, int engine)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
-	drm_via_blitq_t *blitq = dev_priv->blit_queues + engine;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
+	drm_chrome_blitq_t *blitq = dev_priv->blit_queues + engine;
 	wait_queue_head_t *queue;
 	int ret = 0;
 
-	if (via_dmablit_active(blitq, engine, handle, &queue)) {
+	if (chrome_dmablit_active(blitq, engine, handle, &queue)) {
 		DRM_WAIT_ON(ret, *queue, 3 * DRM_HZ,
-			    !via_dmablit_active(blitq, engine, handle, NULL));
+			    !chrome_dmablit_active(blitq, engine, handle, NULL));
 	}
 	DRM_DEBUG("DMA blit sync handle 0x%x engine %d returned %d\n",
 		  handle, engine, ret);
@@ -452,17 +452,17 @@ via_dmablit_sync(struct drm_device *dev, uint32_t handle, int engine)
 
 
 static void
-via_dmablit_timer(unsigned long data)
+chrome_dmablit_timer(unsigned long data)
 {
-	drm_via_blitq_t *blitq = (drm_via_blitq_t *) data;
+	drm_chrome_blitq_t *blitq = (drm_chrome_blitq_t *) data;
 	struct drm_device *dev = blitq->dev;
 	int engine = (int)
-		(blitq - ((struct drm_via_private *)dev->dev_private)->blit_queues);
+		(blitq - ((struct drm_chrome_private *)dev->dev_private)->blit_queues);
 
 	DRM_DEBUG("Polling timer called for engine %d, jiffies %lu\n", engine,
 		  (unsigned long) jiffies);
 
-	via_dmablit_handler(dev, engine, 0);
+	chrome_dmablit_handler(dev, engine, 0);
 
 	if (!timer_pending(&blitq->poll_timer)) {
 		mod_timer(&blitq->poll_timer, jiffies + 1);
@@ -472,7 +472,7 @@ via_dmablit_timer(unsigned long data)
 		* to shorten abort latency. This is a little nasty.
 		*/
 
-	       via_dmablit_handler(dev, engine, 0);
+	       chrome_dmablit_handler(dev, engine, 0);
 
 	}
 }
@@ -488,17 +488,17 @@ via_dmablit_timer(unsigned long data)
 
 
 static void
-via_dmablit_workqueue(struct work_struct *work)
+chrome_dmablit_workqueue(struct work_struct *work)
 {
-	drm_via_blitq_t *blitq = container_of(work, drm_via_blitq_t, wq);
+	drm_chrome_blitq_t *blitq = container_of(work, drm_chrome_blitq_t, wq);
 	struct drm_device *dev = blitq->dev;
 	unsigned long irqsave;
-	drm_via_sg_info_t *cur_sg;
+	drm_chrome_sg_info_t *cur_sg;
 	int cur_released;
 
 
 	DRM_DEBUG("Workqueue task called for blit engine %ld\n", (unsigned long)
-		  (blitq - ((struct drm_via_private *)dev->dev_private)->blit_queues));
+		  (blitq - ((struct drm_chrome_private *)dev->dev_private)->blit_queues));
 
 	spin_lock_irqsave(&blitq->blit_lock, irqsave);
 
@@ -518,7 +518,7 @@ via_dmablit_workqueue(struct work_struct *work)
 
 		DRM_WAKEUP(&blitq->busy_queue);
 
-		via_free_sg_info(dev->pdev, cur_sg);
+		chrome_free_sg_info(dev->pdev, cur_sg);
 		kfree(cur_sg);
 
 		spin_lock_irqsave(&blitq->blit_lock, irqsave);
@@ -534,10 +534,10 @@ via_dmablit_workqueue(struct work_struct *work)
 
 
 void
-via_init_dmablit(struct drm_device *dev)
+chrome_init_dmablit(struct drm_device *dev)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
-	drm_via_blitq_t *blitq;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
+	drm_chrome_blitq_t *blitq;
 	int i, j;
 
 	pci_set_master(dev->pdev);
@@ -558,8 +558,8 @@ via_init_dmablit(struct drm_device *dev)
 		for (j = 0; j < VIA_NUM_BLIT_SLOTS; ++j)
 			DRM_INIT_WAITQUEUE(blitq->blit_queue + j);
 		DRM_INIT_WAITQUEUE(&blitq->busy_queue);
-		INIT_WORK(&blitq->wq, via_dmablit_workqueue);
-		setup_timer(&blitq->poll_timer, via_dmablit_timer,
+		INIT_WORK(&blitq->wq, chrome_dmablit_workqueue);
+		setup_timer(&blitq->poll_timer, chrome_dmablit_timer,
 				(unsigned long)blitq);
 	}
 }
@@ -570,7 +570,7 @@ via_init_dmablit(struct drm_device *dev)
 
 
 static int
-via_build_sg_info(struct drm_device *dev, drm_via_sg_info_t *vsg, drm_via_dmablit_t *xfer)
+chrome_build_sg_info(struct drm_device *dev, drm_chrome_sg_info_t *vsg, drm_chrome_dmablit_t *xfer)
 {
 	int draw = xfer->to_fb;
 	int ret = 0;
@@ -578,7 +578,7 @@ via_build_sg_info(struct drm_device *dev, drm_via_sg_info_t *vsg, drm_via_dmabli
 	vsg->direction = (draw) ? DMA_TO_DEVICE : DMA_FROM_DEVICE;
 	vsg->bounce_buffer = NULL;
 
-	vsg->state = dr_via_sg_init;
+	vsg->state = dr_chrome_sg_init;
 
 	if (xfer->num_lines <= 0 || xfer->line_length <= 0) {
 		DRM_ERROR("Zero size bitblt.\n");
@@ -649,19 +649,19 @@ via_build_sg_info(struct drm_device *dev, drm_via_sg_info_t *vsg, drm_via_dmabli
 	}
 #endif
 
-	if (0 != (ret = via_lock_all_dma_pages(vsg, xfer))) {
+	if (0 != (ret = chrome_lock_all_dma_pages(vsg, xfer))) {
 		DRM_ERROR("Could not lock DMA pages.\n");
-		via_free_sg_info(dev->pdev, vsg);
+		chrome_free_sg_info(dev->pdev, vsg);
 		return ret;
 	}
 
-	via_map_blit_for_device(dev->pdev, xfer, vsg, 0);
-	if (0 != (ret = via_alloc_desc_pages(vsg))) {
+	chrome_map_blit_for_device(dev->pdev, xfer, vsg, 0);
+	if (0 != (ret = chrome_alloc_desc_pages(vsg))) {
 		DRM_ERROR("Could not allocate DMA descriptor pages.\n");
-		via_free_sg_info(dev->pdev, vsg);
+		chrome_free_sg_info(dev->pdev, vsg);
 		return ret;
 	}
-	via_map_blit_for_device(dev->pdev, xfer, vsg, 1);
+	chrome_map_blit_for_device(dev->pdev, xfer, vsg, 1);
 
 	return 0;
 }
@@ -673,7 +673,7 @@ via_build_sg_info(struct drm_device *dev, drm_via_sg_info_t *vsg, drm_via_dmabli
  */
 
 static int
-via_dmablit_grab_slot(drm_via_blitq_t *blitq, int engine)
+chrome_dmablit_grab_slot(drm_chrome_blitq_t *blitq, int engine)
 {
 	int ret = 0;
 	unsigned long irqsave;
@@ -701,7 +701,7 @@ via_dmablit_grab_slot(drm_via_blitq_t *blitq, int engine)
  */
 
 static void
-via_dmablit_release_slot(drm_via_blitq_t *blitq)
+chrome_dmablit_release_slot(drm_chrome_blitq_t *blitq)
 {
 	unsigned long irqsave;
 
@@ -717,11 +717,11 @@ via_dmablit_release_slot(drm_via_blitq_t *blitq)
 
 
 static int
-via_dmablit(struct drm_device *dev, drm_via_dmablit_t *xfer)
+chrome_dmablit(struct drm_device *dev, drm_chrome_dmablit_t *xfer)
 {
-	struct drm_via_private *dev_priv = dev->dev_private;
-	drm_via_sg_info_t *vsg;
-	drm_via_blitq_t *blitq;
+	struct drm_chrome_private *dev_priv = dev->dev_private;
+	drm_chrome_sg_info_t *vsg;
+	drm_chrome_blitq_t *blitq;
 	int ret;
 	int engine;
 	unsigned long irqsave;
@@ -733,14 +733,14 @@ via_dmablit(struct drm_device *dev, drm_via_dmablit_t *xfer)
 
 	engine = (xfer->to_fb) ? 0 : 1;
 	blitq = dev_priv->blit_queues + engine;
-	if (0 != (ret = via_dmablit_grab_slot(blitq, engine)))
+	if (0 != (ret = chrome_dmablit_grab_slot(blitq, engine)))
 		return ret;
 	if (NULL == (vsg = kmalloc(sizeof(*vsg), GFP_KERNEL))) {
-		via_dmablit_release_slot(blitq);
+		chrome_dmablit_release_slot(blitq);
 		return -ENOMEM;
 	}
-	if (0 != (ret = via_build_sg_info(dev, vsg, xfer))) {
-		via_dmablit_release_slot(blitq);
+	if (0 != (ret = chrome_build_sg_info(dev, vsg, xfer))) {
+		chrome_dmablit_release_slot(blitq);
 		kfree(vsg);
 		return ret;
 	}
@@ -755,7 +755,7 @@ via_dmablit(struct drm_device *dev, drm_via_dmablit_t *xfer)
 	spin_unlock_irqrestore(&blitq->blit_lock, irqsave);
 	xfer->sync.engine = engine;
 
-	via_dmablit_handler(dev, engine, 0);
+	chrome_dmablit_handler(dev, engine, 0);
 
 	return 0;
 }
@@ -768,15 +768,15 @@ via_dmablit(struct drm_device *dev, drm_via_dmablit_t *xfer)
  */
 
 int
-via_dma_blit_sync(struct drm_device *dev, void *data, struct drm_file *file_priv)
+chrome_dma_blit_sync(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	drm_via_blitsync_t *sync = data;
+	drm_chrome_blitsync_t *sync = data;
 	int err;
 
 	if (sync->engine >= VIA_NUM_BLIT_ENGINES)
 		return -EINVAL;
 
-	err = via_dmablit_sync(dev, sync->sync_handle, sync->engine);
+	err = chrome_dmablit_sync(dev, sync->sync_handle, sync->engine);
 
 	if (-EINTR == err)
 		err = -EAGAIN;
@@ -792,12 +792,12 @@ via_dma_blit_sync(struct drm_device *dev, void *data, struct drm_file *file_priv
  */
 
 int
-via_dma_blit(struct drm_device *dev, void *data, struct drm_file *file_priv)
+chrome_dma_blit(struct drm_device *dev, void *data, struct drm_file *file_priv)
 {
-	drm_via_dmablit_t *xfer = data;
+	drm_chrome_dmablit_t *xfer = data;
 	int err;
 
-	err = via_dmablit(dev, xfer);
+	err = chrome_dmablit(dev, xfer);
 
 	return err;
 }

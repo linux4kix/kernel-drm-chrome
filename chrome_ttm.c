@@ -92,7 +92,7 @@ static void chrome_evict_flags(struct ttm_buffer_object *bo,
 	struct chrome_object *vbo;
 
 	vbo = container_of(bo, struct chrome_object, bo);
-	via_ttm_placement_from_domain(vbo, CHROME_GEM_DOMAIN_CPU);
+	chrome_ttm_placement_from_domain(vbo, CHROME_GEM_DOMAIN_CPU);
 	
 	*placement = vbo->placement;
 }
